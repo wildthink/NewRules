@@ -1,19 +1,15 @@
 import XCTest
 @testable import NewRules
+@testable import Experimental
 
 final class NewRulesTests: XCTestCase {
      
     func testExample() throws {
-//        let d1 = DirectoryRewrite()
-        let d2 =
-        TestRule()
-//            .push(pin: .init(), pout: .init())
-        
-//        let r1 = try d1.builtin.run(environment: EnvironmentValues())
+        let rule = TestRule()
         let env = EnvironmentValues()
-        try d2.builtin.run(environment: env)
+        try rule.builtin.run(environment: env)
 
-        print(type(of: d2), env)
+        print(env)
     }
 
 }
@@ -21,6 +17,19 @@ final class NewRulesTests: XCTestCase {
 extension Rule {
     func erase() -> some Rule {
         AnyBuiltin(any: self)
+    }
+}
+
+struct RuleBox<Content: Rule>: Rule {
+    @RuleBuilder var content: Content
+    
+    var body: some Rule {
+        content
+    }
+    
+    func trace(_ m: String) -> some Rule {
+        print(#function, m)
+        return self
     }
 }
 
@@ -35,7 +44,12 @@ struct TestRule: Rule {
                 case .directory:
                     TraceRule(msg: p.name)
                 case .text:
-                    TraceRule(msg: p.name)
+                    RuleBox {
+                        TraceRule(msg: p.name)
+                            .modifier(EmptyModifier())
+                            .erase()
+                    }
+                    .trace("okay")
                 case .unknown:
                     TraceRule(msg: p.name)
                         .modifier(EmptyModifier())
@@ -45,9 +59,55 @@ struct TestRule: Rule {
     }
 }
 
-extension RuleBuilder {
-//    @_disfavoredOverload/
-    public static func buildExpression(_ expression: any Rule) -> AnyBuiltin {
-        AnyBuiltin(any: expression)
+struct TestRuleII: Rule {
+    var opt: Opts = .a
+    
+    var body: some Rule {
+        EmptyRule()
+        for n in 0..<5 {
+            let _ = print(n)
+            EmptyRule()
+        }
+        if true {
+            FileRewrite()
+        } else {
+            branch("b1")
+        }
+        switch opt {
+            case .a: EmptyRule()
+            case .b: TestRule().modifier(EmptyModifier())
+        }
+        EmptyRule()
     }
+    
+    @RuleBuilder
+    func branch(_ p: Path) -> some Rule {
+        switch p.uti {
+            case .directory:
+                DirectoryRewrite()
+            case .text:
+                FileRewrite()
+            case .unknown:
+                EmptyRule()
+        }
+    }
+    
+}
+
+enum Opts { case a, b }
+@RuleBuilder
+func sampler(opt: Opts) -> some Rule {
+    EmptyRule()
+    for n in 0..<5 {
+        let _ = print(n)
+        EmptyRule()
+    }
+    if true {
+        FileRewrite()
+    }
+    switch opt {
+        case .a: EmptyRule()
+        case .b: TestRule().modifier(EmptyModifier())
+    }
+    EmptyRule()
 }

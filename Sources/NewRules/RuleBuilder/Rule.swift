@@ -50,7 +50,11 @@ extension Never: Rule {
 
 extension RuleBuilder {
     // Impossible partial Rule. Useful for fatalError().
-    // static func buildExpression(_ expression: any Rule) -> Never
+    static func buildExpression<N: Rule>(_ expression: N) -> N
+    where N.Body == Never {
+        expression
+    }
+
     static func buildPartialBlock(first: Never) -> Never {
     }
 }
@@ -174,75 +178,17 @@ public struct RuleArray: Builtin {
     }
 }
 
-struct TestRule: Rule {
-    var opt: Opts = .a
-    
-    var body: some Rule {
-        EmptyRule()
-        for n in 0..<5 {
-            let _ = print(n)
-            EmptyRule()
-        }
-        if true {
-            FileRewrite()
-        } else {
-            branch("b1")
-        }
-        switch opt {
-            case .a: EmptyRule()
-            case .b: TestRule().modifier(EmptyModifier())
-        }
-        EmptyRule()
-    }
-    
-    @RuleBuilder
-    func branch(_ p: Path) -> some Rule {
-        switch p.uti {
-            case .directory:
-                DirectoryRewrite()
-            case .text:
-                FileRewrite()
-            case .unknown:
-                EmptyRule()
-        }
-    }
-
-}
-
-enum Opts { case a, b }
-@RuleBuilder
-func sampler(opt: Opts) -> some Rule {
-    EmptyRule()
-//    for n in 0..<5 {
-//        let _ = print(n)
-//        EmptyRule()
-//    }
-//    if true {
-//        FileRewrite()
-//    }
-    switch opt {
-        case .a: EmptyRule()
-        case .b: TestRule().modifier(EmptyModifier())
-    }
-    EmptyRule()
-}
-
 @resultBuilder
 public enum RuleBuilder {
     
     // MARK: Rule from Expression
     // CANNOT USE "-> some Rule" for loops to work
-    public static func buildExpression<R: Rule>(_ expression: R) -> R {
-        return expression
-    }
-
-//    public static func buildExpression(_ expression: ModifiedRule) -> ModifiedRule {
-//        return expression
-//    }
-
-    @_disfavoredOverload
-    public static func buildExpression<R: Rule>(_ expression: R) -> some Rule {
-        return expression
+    // Return -> R will work BUT Rule extension modifying method will
+    // be requied to return a concrete Rule type (i.e. ModifiedRule)
+    // BUT using `AnyBuiltin` to type erase the Rule at this point/level
+    // (seems) to make everything build as expected, so no-harm no-foul
+    public static func buildExpression<R: Rule>(_ expression: R) -> AnyBuiltin {
+        AnyBuiltin(any: expression)
     }
 
     // Optionals

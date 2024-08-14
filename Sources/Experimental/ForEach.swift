@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import NewRules
 
 public struct ForEach<Element, Content: Rule>: Builtin {
     public init(_ data: [Element], @RuleBuilder content: @escaping (Element) -> Content) {

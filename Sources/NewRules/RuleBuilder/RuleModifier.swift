@@ -46,10 +46,6 @@ public struct ModifiedRule: Builtin {
         self.content = content
         self.modifier = modifier
     }
-
-//    public var body: some Rule {
-//        Content(rule: self)
-//    }
     
     public func run(environment: EnvironmentValues) throws {
         environment.install(on: modifier)
@@ -60,18 +56,13 @@ public struct ModifiedRule: Builtin {
 }
 
 extension Rule {
-//    public func xmodifier<R: Rule, M: RuleModifier>(_ modifier: M)
-//    -> R
-//    where R == _ModifiedRule<Self, M> {
-//        _ModifiedRule(content: self, modifier: modifier)
-//    }
-
     public func modifier<M: RuleModifier>(_ modifier: M) -> ModifiedRule {
         ModifiedRule(content: self, modifier: modifier)
     }
 }
 
 public struct EmptyModifier: RuleModifier {
+    public init() {}
     public func rules(_ content: Content) -> some Rule {
         content
     }

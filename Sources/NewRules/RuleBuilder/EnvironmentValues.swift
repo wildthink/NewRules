@@ -26,45 +26,6 @@ public struct EnvironmentValues {
     }
 }
 
-//enum HashedAssetNames: EnvironmentKey {
-//    static var defaultValue: [String:String] = [:]
-//}
-//
-//extension EnvironmentValues {
-//    public var hashedAssetNames: [String:String] {
-//        get {
-//            self[HashedAssetNames.self]
-//        }
-//        set {
-//            self[HashedAssetNames.self] = newValue
-//        }
-//    }
-//}
-//
-//extension Rule {
-//    public func hashedAssetNames(_ names: [String:String]) -> some Rule {
-//        modifyEnvironment(keyPath: \.hashedAssetNames, modify: { $0.merge(names, uniquingKeysWith: { fatalError("Duplicate asset name \($1)" )}) })
-//    }
-//}
-//
-//extension EnvironmentValues {
-//    public var currentPath: URL {
-//        inputBaseURL
-//    }
-//    
-//    public func allFiles(at relativePath: String) throws -> [String] {
-//        try fileManager.contentsOfDirectory(atPath: inputBaseURL.appendingPathComponent(relativePath).path)
-//    }
-//    
-//    public func read(_ relativePath: String) throws -> String {
-//        return try String(contentsOf: currentPath.appendingPathComponent(relativePath))
-//    }
-//    
-//    public func read(_ relativePath: String) throws -> Data {
-//        return try Data(contentsOf: currentPath.appendingPathComponent(relativePath))
-//    }
-//}
-
 struct EnvironmentModifier<A, Content: Rule>: Builtin {
     init(content: Content, keyPath: WritableKeyPath<EnvironmentValues, A>, modify: @escaping (inout A) -> ()) {
         self.content = content
