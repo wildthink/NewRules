@@ -38,23 +38,23 @@ public struct ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
     }
 }
 
-public struct _ModifiedRule<Content: Rule>: Builtin {
-    
-    var content: Content
-    var modifier: any RuleModifier
-    
-    public init(content: Content, modifier: any RuleModifier) {
-        self.content = content
-        self.modifier = modifier
-    }
-    
-    public func run(environment: ScopeValues) throws {
-        environment.install(on: modifier)
-        try modifier
-            .rules(.init(rule: content))
-            .builtin.run(environment: environment)
-    }
-}
+//public struct _ModifiedRule<Content: Rule>: Builtin {
+//    
+//    var content: Content
+//    var modifier: any RuleModifier
+//    
+//    public init(content: Content, modifier: any RuleModifier) {
+//        self.content = content
+//        self.modifier = modifier
+//    }
+//    
+//    public func run(environment: ScopeValues) throws {
+//        environment.install(on: modifier)
+//        try modifier
+//            .rules(.init(rule: content))
+//            .builtin.run(environment: environment)
+//    }
+//}
 
 extension Rule {
     public func modifier<M: RuleModifier>(_ modifier: M

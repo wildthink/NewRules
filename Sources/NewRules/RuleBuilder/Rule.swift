@@ -11,6 +11,11 @@ public protocol BuiltinRule {
 
 public typealias Builtin = BuiltinRule & Rule
 
+public enum RuleError: Error {
+    case missing(msg: String, file: String = #file, line: Int = #line)
+}
+
+// MARK: Common Rules
 public struct AnyBuiltin: Builtin {
     let _run: (ScopeValues) throws -> ()
     
@@ -109,10 +114,6 @@ public struct Throw: Builtin {
     }
 }
 
-public enum RuleError: Error {
-    case missing(String, file: String = #file, line: Int = #line)
-}
-
 extension Optional: Builtin where Wrapped: Rule {
     public func run(environment: ScopeValues) throws {
         try self?.builtin.run(environment: environment)
@@ -192,6 +193,7 @@ public struct RuleArray: Builtin {
 //   }
 // All that said, we provide a ForEach so we don't need buildArray(...)
 
+// MARK: - Rule Builder
 @resultBuilder
 public enum RuleBuilder {
     
