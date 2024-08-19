@@ -4,7 +4,7 @@ public protocol RuleModifier {
     func rules(_ content: Content) -> Result
 }
 
-public struct Content: Rule, BuiltinRule {
+public struct Content: Builtin {
     
     private var rule: any Rule
 
@@ -12,12 +12,13 @@ public struct Content: Rule, BuiltinRule {
         self.rule = rule
     }
 
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try rule.builtin.run(environment: environment)
     }
 }
+public typealias AnyRule = Content
 
-public struct _ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
+public struct ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
     public typealias Content = R
     public typealias Modifier = M
     
@@ -29,7 +30,7 @@ public struct _ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
         self.modifier = modifier
     }
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         environment.install(on: modifier)
         try modifier
             .rules(.init(rule: content))
@@ -37,17 +38,17 @@ public struct _ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
     }
 }
 
-public struct ModifiedRule: Builtin {
+public struct _ModifiedRule<Content: Rule>: Builtin {
     
-    var content: any Rule
+    var content: Content
     var modifier: any RuleModifier
     
-    public init(content: any Rule, modifier: any RuleModifier) {
+    public init(content: Content, modifier: any RuleModifier) {
         self.content = content
         self.modifier = modifier
     }
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         environment.install(on: modifier)
         try modifier
             .rules(.init(rule: content))
@@ -56,7 +57,8 @@ public struct ModifiedRule: Builtin {
 }
 
 extension Rule {
-    public func modifier<M: RuleModifier>(_ modifier: M) -> ModifiedRule {
+    public func modifier<M: RuleModifier>(_ modifier: M
+    ) -> some Rule {
         ModifiedRule(content: self, modifier: modifier)
     }
 }

@@ -1,13 +1,18 @@
 import Foundation
 
+public protocol Rule<Body> {
+    associatedtype Body: Rule
+    @RuleBuilder var body: Body { get }
+}
+
 public protocol BuiltinRule {
-    func run(environment: EnvironmentValues) throws
+    func run(environment: ScopeValues) throws
 }
 
 public typealias Builtin = BuiltinRule & Rule
 
 public struct AnyBuiltin: Builtin {
-    let _run: (EnvironmentValues) throws -> ()
+    let _run: (ScopeValues) throws -> ()
     
     public init<R: Rule>(_ value: R) {
         self._run = { env in
@@ -27,7 +32,7 @@ public struct AnyBuiltin: Builtin {
         }
     }
 
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try _run(environment)
     }
 }
@@ -59,11 +64,6 @@ extension RuleBuilder {
     }
 }
 
-public protocol Rule<Body> {
-    associatedtype Body: Rule
-    @RuleBuilder var body: Body { get }
-}
-
 extension Rule {
     public var builtin: BuiltinRule {
         if let x = self as? BuiltinRule { return x }
@@ -73,49 +73,48 @@ extension Rule {
 
 public struct EmptyRule: Builtin {
     public init() { }
-    public func run(environment: EnvironmentValues) { }
+    public func run(environment: ScopeValues) { }
 }
 
 public struct TraceRule: Builtin {
+    public typealias Trace = (TraceRule) -> Void
     var msg: String
     var file: String
     var line: Int
+    var trace: Trace
     
-    init(msg: String = "TRACE", file: String = #fileID, line: Int = #line) {
+    public init(msg: String = "TRACE",
+                _file: String = #fileID, _line: Int = #line,
+                call: Trace? = nil
+    ) {
         self.msg = msg
-        self.file = file
-        self.line = line
+        self.file = _file
+        self.line = _line
+        self.trace = call ?? { print($0.msg, $0.file, $0.line) }
     }
     
-    public func run(environment: EnvironmentValues) {
-        print(msg, file, line)
+    public func run(environment: ScopeValues) {
+        trace(self)
     }
 }
 
-public struct MissingRule: BuiltinRule, Rule {
-    var file: String
-    var line: Int
+public struct Throw: Builtin {
+    var error: Error
     
-    public init(file: String = #fileID, line: Int = #line) {
-        self.file = file
-        self.line = line
+    public init(error: Error) {
+        self.error = error
     }
-    
-    public var errorDescription: String {
-        "\(file):\(line)"
-    }
-    
-    public func run(environment: EnvironmentValues) throws {
-        throw RuleError.missing(errorDescription)
+    public func run(environment: ScopeValues) throws {
+        throw error
     }
 }
 
 public enum RuleError: Error {
-    case missing(String)
+    case missing(String, file: String = #file, line: Int = #line)
 }
 
 extension Optional: Builtin where Wrapped: Rule {
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try self?.builtin.run(environment: environment)
     }
 }
@@ -127,7 +126,7 @@ public struct RuleGroup<Content: Rule>: Builtin {
         self.content = content()
     }
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try content.builtin.run(environment: environment)
     }
 }
@@ -138,7 +137,7 @@ public struct Pair<L, R>: Builtin where L: Rule, R: Rule {
         self.value = (l,r)
     }
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try value.0.builtin.run(environment: environment)
         try value.1.builtin.run(environment: environment)
     }
@@ -148,7 +147,7 @@ public enum Choice<L, R>: Builtin where L: Rule, R: Rule {
     case left(L)
     case right(R)
 
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         switch self {
         case .left(let rule):
             try rule.builtin.run(environment: environment)
@@ -159,7 +158,7 @@ public enum Choice<L, R>: Builtin where L: Rule, R: Rule {
 }
 
 extension Array<any Rule>: Builtin {
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         for rule in self {
             try rule.builtin.run(environment: environment)
         }
@@ -173,31 +172,41 @@ public struct RuleArray: Builtin {
         self.content = rules
     }
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try content.builtin.run(environment: environment)
     }
 }
+
+// CANNOT USE "-> some Rule" for-loops to work
+//   static func buildExpression<R: Rule>(_ expression: R) -> R {
+//      expression
+//   }
+// will work BUT Rule extension modifying method will
+// be requied to return a concrete Rule type (i.e. ModifiedRule)
+// BUT using `AnyRule` to type erase the Rule at this point/level
+// (seems) to make everything build as expected, so no-harm no-foul,
+// almost. With AnyRule, you lose the ability to constrain ModifiedContent
+// extensions. <sigh>
+//   static func buildExpression<R: Rule>(_ expression: R) -> AnyRule {
+//      AnyRule(rule: expression)
+//   }
+// All that said, we provide a ForEach so we don't need buildArray(...)
 
 @resultBuilder
 public enum RuleBuilder {
     
     // MARK: Rule from Expression
-    // CANNOT USE "-> some Rule" for loops to work
-    // Return -> R will work BUT Rule extension modifying method will
-    // be requied to return a concrete Rule type (i.e. ModifiedRule)
-    // BUT using `AnyBuiltin` to type erase the Rule at this point/level
-    // (seems) to make everything build as expected, so no-harm no-foul
-    public static func buildExpression<R: Rule>(_ expression: R) -> AnyBuiltin {
-        AnyBuiltin(any: expression)
+    public static func buildExpression<R: Rule>(_ expression: R) -> some Rule {
+        expression
     }
 
     // Optionals
-    public static func buildExpression<R: Rule>(_ expression: R?) -> R? {
+    public static func buildExpression<R: Rule>(_ expression: R?) -> (some Rule)?? {
         expression
     }
     
     // MARK: Rule Building
-    public static func buildPartialBlock<R: Rule>(first: R) -> R {
+    public static func buildPartialBlock<R: Rule>(first: R) -> some Rule {
         first
     }
     public static func buildPartialBlock<R1: Rule, R2: Rule>(
@@ -227,8 +236,8 @@ public enum RuleBuilder {
         .right(component)
     }
 
-    // Rule for an array of Rules. Useful for 'for' loops.
-    public static func buildArray(_ components: [any Rule]) -> RuleArray {
-        RuleArray(rules: components)
-    }
+// DO NOT USE: Useful for 'for' loops BUT see above NOTE
+//    public static func buildArray(_ components: [any Rule]) -> RuleArray {
+//        RuleArray(rules: components)
+//    }
 }
