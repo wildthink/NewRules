@@ -23,12 +23,12 @@ final class NewRulesTests: XCTestCase {
 
 extension Rule {
     @warn_unqualified_access
-    func erase() -> AnyRule {
+    func erase() -> some Rule {
         AnyRule(rule: self)
     }
     
     @warn_unqualified_access
-    func emptyModifier() -> Modified {
+    func emptyModifier() -> some Rule {
         self.modifier(EmptyModifier())
     }
 }

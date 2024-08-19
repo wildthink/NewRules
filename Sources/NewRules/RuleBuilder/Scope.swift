@@ -11,39 +11,99 @@ public protocol DynamicValue {
     func update(with: EnvironmentValues)
 }
 
+public struct ScopeValues {
+    private var values: [AnyHashable: Any] = [:]
+    
+    func _get<V>(key: String = #function, default dv: V,
+                 _file: String = #fileID, _line: Int = #line
+    ) -> V {
+        values[key] as? V ?? dv
+    }
+    
+    mutating func _set<V>(key: String = #function, _ value: V) {
+        values[key] = value
+    }
+}
+
+@propertyWrapper
+public struct Scope<Value>: SetEnvironment {
+    var keyPath: KeyPath<EnvironmentValues, Value>
+    @Box fileprivate var value: Value?
+    //    @Box fileprivate var values: EnvironmentValues?
+    
+    public init(_ keyPath: KeyPath<EnvironmentValues, Value>) {
+        self.keyPath = keyPath
+    }
+    
+    public init(wrappedValue: Value, _ keyPath: KeyPath<EnvironmentValues, Value>) {
+        self.keyPath = keyPath
+        self.value = wrappedValue
+    }
+    
+    public var wrappedValue: Value {
+        value ?? EnvironmentValues.defaultValues[keyPath: keyPath]
+    }
+    
+    func set(environment: EnvironmentValues) {
+        value = environment[keyPath: keyPath]
+    }
+}
+
+@propertyWrapper
+public struct Model<Value>: DynamicProperty {
+    @StateObject private var box: Box<Value>
+    @Scope(\.self) var env
+    
+    public var wrappedValue: Value {
+        get { box.wrappedValue }
+        nonmutating set { box.wrappedValue = newValue }
+    }
+    
+    public var projectedValue: Binding<Value> {
+        Binding(
+            get: { wrappedValue },
+            set: { box.wrappedValue = $0 }
+        )
+    }
+    
+    public func update() {
+        env.install(on: box.wrappedValue)
+    }
+}
+
 //protocol EnvironmentSettable {
 //    func set(values: EnvironmentValues)
 //}
 
 // MARK: - objc.io
-@propertyWrapper
-struct _Scope<Value>: DynamicValue, DynamicProperty {
-    var keyPath: KeyPath<EnvironmentValues, Value>
-    var defaultValue: () -> Value
-    @Box var value: Value? = nil
-    
-    init(wrappedValue defaultValue: Value, _ keyPath: KeyPath<EnvironmentValues, Value>) {
-        self.keyPath = keyPath
-        self.defaultValue = { defaultValue }
-    }
-    
-    init(_ keyPath: KeyPath<EnvironmentValues, Value>) {
-        self.keyPath = keyPath
-        self.defaultValue = { EnvironmentValues.current[keyPath: keyPath] }
-    }
-    
-    func update(with values: EnvironmentValues) {
-        self.value = values[keyPath: keyPath]
-    }
-    
-    var wrappedValue: Value {
-        return value ?? defaultValue()
-    }
-}
-
-extension EnvironmentValues: @unchecked Sendable {
-    @TaskLocal public static var current = Self()
-}
+//@propertyWrapper
+//struct _Scope<Value>: DynamicValue, DynamicProperty {
+//    var keyPath: KeyPath<EnvironmentValues, Value>
+//    var defaultValue: () -> Value
+//    @Box var value: Value? = nil
+//    
+//    init(wrappedValue defaultValue: Value, _ keyPath: KeyPath<EnvironmentValues, Value>) {
+//        self.keyPath = keyPath
+//        self.defaultValue = { defaultValue }
+//    }
+//    
+//    init(_ keyPath: KeyPath<EnvironmentValues, Value>) {
+//        self.keyPath = keyPath
+//        self.defaultValue = { EnvironmentValues.current[keyPath: keyPath] }
+//    }
+//    
+//    func update(with values: EnvironmentValues) {
+//        self.value = values[keyPath: keyPath]
+//    }
+//    
+//    var wrappedValue: Value {
+//        return value ?? defaultValue()
+//    }
+//}
+//
+//extension EnvironmentValues: @unchecked Sendable {
+//    @TaskLocal public static var current = Self()
+//}
 
 //extension EnvironmentValues {
 //    func install<A>(on obj: A) {
@@ -75,51 +135,3 @@ extension EnvironmentValues: @unchecked Sendable {
 //protocol SetEnvironment {
 //    func set(environment: EnvironmentValues)
 //}
-
-//@propertyWrapper
-//public struct Scope<Value>: SetEnvironment {
-//    var keyPath: KeyPath<EnvironmentValues, Value>
-//    @Box fileprivate var value: Value?
-////    @Box fileprivate var values: EnvironmentValues?
-//
-//    public init(_ keyPath: KeyPath<EnvironmentValues, Value>) {
-//        self.keyPath = keyPath
-//    }
-//    
-//    public init(wrappedValue: Value, _ keyPath: KeyPath<EnvironmentValues, Value>) {
-//        self.keyPath = keyPath
-//        self.value = wrappedValue
-//    }
-//
-//    public var wrappedValue: Value {
-//        // if Value was NOT optional then we would
-//        // guard let values else { fatalError }
-//        value ?? EnvironmentValues.current[keyPath: keyPath]
-//    }
-//    
-//    func set(environment: EnvironmentValues) {
-//        value = environment[keyPath: keyPath]
-//    }
-//}
-
-@propertyWrapper
-public struct Model<Value>: DynamicProperty {
-    @StateObject private var box: Box<Value>
-    @Environment(\.self) var env
-    
-    public var wrappedValue: Value {
-        get { box.wrappedValue }
-        nonmutating set { box.wrappedValue = newValue }
-    }
-    
-    public var projectedValue: Binding<Value> {
-        Binding(
-            get: { wrappedValue },
-            set: { box.wrappedValue = $0 }
-        )
-    }
-    
-    public func update() {
-        env.install(on: box.wrappedValue)
-    }
-}

@@ -4,7 +4,7 @@ public protocol RuleModifier {
     func rules(_ content: Content) -> Result
 }
 
-public struct Content: Rule, BuiltinRule {
+public struct Content: Builtin {
     
     private var rule: any Rule
 
@@ -16,8 +16,9 @@ public struct Content: Rule, BuiltinRule {
         try rule.builtin.run(environment: environment)
     }
 }
+public typealias AnyRule = Content
 
-public struct _ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
+public struct ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
     public typealias Content = R
     public typealias Modifier = M
     
@@ -37,7 +38,7 @@ public struct _ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
     }
 }
 
-public struct ModifiedRule<Content: Rule>: Builtin {
+public struct _ModifiedRule<Content: Rule>: Builtin {
     
     var content: Content
     var modifier: any RuleModifier
@@ -56,7 +57,8 @@ public struct ModifiedRule<Content: Rule>: Builtin {
 }
 
 extension Rule {
-    public func modifier<M: RuleModifier>(_ modifier: M) -> ModifiedRule<Self> {
+    public func modifier<M: RuleModifier>(_ modifier: M
+    ) -> some Rule {
         ModifiedRule(content: self, modifier: modifier)
     }
 }

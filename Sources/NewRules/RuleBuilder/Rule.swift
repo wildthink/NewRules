@@ -2,7 +2,7 @@ import Foundation
 
 public protocol Rule<Body> {
     associatedtype Body: Rule
-    typealias Modified = ModifiedRule<Self>
+//    typealias Modified = ModifiedRule<Self>
     @RuleBuilder var body: Body { get }
 }
 
@@ -12,17 +12,17 @@ public protocol BuiltinRule {
 
 public typealias Builtin = BuiltinRule & Rule
 
-public struct AnyRule: Builtin {
-    var rule: any Rule
-    
-    public init(rule: any Rule) {
-        self.rule = rule
-    }
-    
-    public func run(environment: EnvironmentValues) throws {
-        try rule.builtin.run(environment: environment)
-    }
-}
+//public struct AnyRule: Builtin {
+//    var rule: any Rule
+//    
+//    public init<R: Rule>(rule: R) {
+//        self.rule = rule
+//    }
+//    
+//    public func run(environment: EnvironmentValues) throws {
+//        try rule.builtin.run(environment: environment)
+//    }
+//}
 
 public struct AnyBuiltin: Builtin {
     let _run: (EnvironmentValues) throws -> ()
@@ -90,41 +90,58 @@ public struct EmptyRule: Builtin {
 }
 
 public struct TraceRule: Builtin {
+    public typealias Trace = (TraceRule) -> Void
     var msg: String
     var file: String
     var line: Int
+    var trace: Trace
     
-    public init(msg: String = "TRACE", file: String = #fileID, line: Int = #line) {
+    public init(msg: String = "TRACE",
+                _file: String = #fileID, _line: Int = #line,
+                call: Trace? = nil
+    ) {
         self.msg = msg
-        self.file = file
-        self.line = line
+        self.file = _file
+        self.line = _line
+        self.trace = call ?? { print($0.msg, $0.file, $0.line) }
     }
     
     public func run(environment: EnvironmentValues) {
-        print(msg, file, line)
+        trace(self)
     }
 }
 
-public struct MissingRule: BuiltinRule, Rule {
-    var file: String
-    var line: Int
+//public struct MissingRule: BuiltinRule, Rule {
+//    var file: String
+//    var line: Int
+//    
+//    public init(file: String = #fileID, line: Int = #line) {
+//        self.file = file
+//        self.line = line
+//    }
+//    
+//    public var errorDescription: String {
+//        "\(file):\(line)"
+//    }
+//    
+//    public func run(environment: EnvironmentValues) throws {
+//        throw RuleError.missing(errorDescription)
+//    }
+//}
+
+public struct Throw: Builtin {
+    var error: Error
     
-    public init(file: String = #fileID, line: Int = #line) {
-        self.file = file
-        self.line = line
+    public init(error: Error) {
+        self.error = error
     }
-    
-    public var errorDescription: String {
-        "\(file):\(line)"
-    }
-    
     public func run(environment: EnvironmentValues) throws {
-        throw RuleError.missing(errorDescription)
+        throw error
     }
 }
 
 public enum RuleError: Error {
-    case missing(String)
+    case missing(String, file: String = #file, line: Int = #line)
 }
 
 extension Optional: Builtin where Wrapped: Rule {
@@ -205,17 +222,17 @@ public enum RuleBuilder {
     // public static func buildExpression<R: Rule>(_ expression: R) -> AnyRule {
     //    AnyRule(rule: expression)
     // }
-    public static func buildExpression<R: Rule>(_ expression: R) -> R {
+    public static func buildExpression<R: Rule>(_ expression: R) -> some Rule {
         expression
     }
 
     // Optionals
-    public static func buildExpression<R: Rule>(_ expression: R?) -> R? {
+    public static func buildExpression<R: Rule>(_ expression: R?) -> (some Rule)?? {
         expression
     }
     
     // MARK: Rule Building
-    public static func buildPartialBlock<R: Rule>(first: R) -> R {
+    public static func buildPartialBlock<R: Rule>(first: R) -> some Rule {
         first
     }
     public static func buildPartialBlock<R1: Rule, R2: Rule>(

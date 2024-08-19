@@ -8,29 +8,11 @@
 import Foundation
 import OSLog
 
-public protocol EnvironmentKey {
-    associatedtype Value
-    static var defaultValue: Value { get }
-}
-
-public struct EnvironmentValues {
-
-    var userDefined: [ObjectIdentifier:Any] = [:]
-
-    public subscript<Key: EnvironmentKey>(key: Key.Type = Key.self) -> Key.Value {
-        get {
-            userDefined[ObjectIdentifier(key)] as? Key.Value ?? Key.defaultValue
-        }
-        set {
-            userDefined[ObjectIdentifier(key)] = newValue
-        }
-    }
-}
-
 // MARK: Logger Environment Value
-enum LoggerKey: EnvironmentKey {
+struct LoggerKey: EnvironmentKey {
     static var defaultValue: Logger = Logger(subsystem: "com.wildthink", category: "rules")
 }
+
 extension EnvironmentValues {
     public var os_log: Logger {
         get { self[LoggerKey.self] }
@@ -93,20 +75,45 @@ protocol SetEnvironment {
     func set(environment: EnvironmentValues)
 }
 
-@propertyWrapper
-public struct Environment<Value>: SetEnvironment {
-    var keyPath: KeyPath<EnvironmentValues, Value>
-    @Box fileprivate var values: EnvironmentValues?
-    
-    public init(_ keyPath: KeyPath<EnvironmentValues, Value>) {
-        self.keyPath = keyPath
-    }
-    
-    public var wrappedValue: Value {
-        values![keyPath: keyPath]
-    }
-    
-    func set(environment: EnvironmentValues) {
-        values = environment
-    }
-}
+//@propertyWrapper
+//public struct Environment<Value>: SetEnvironment {
+//    var keyPath: KeyPath<EnvironmentValues, Value>
+//    @Box fileprivate var values: EnvironmentValues?
+//    
+//    public init(_ keyPath: KeyPath<EnvironmentValues, Value>) {
+//        self.keyPath = keyPath
+//    }
+//    
+//    public var wrappedValue: Value {
+//        values![keyPath: keyPath]
+//    }
+//    
+//    func set(environment: EnvironmentValues) {
+//        values = environment
+//    }
+//}
+
+// MARK:
+//#if canImport(SwiftUI)
+//import SwiftUI
+//#else
+//public protocol EnvironmentKey {
+//    associatedtype Value
+//    static var defaultValue: Value { get }
+//}
+//
+//public struct EnvironmentValues {
+//    
+//    var userDefined: [ObjectIdentifier:Any] = [:]
+//    
+//    public subscript<Key: EnvironmentKey>(key: Key.Type = Key.self) -> Key.Value {
+//        get {
+//            userDefined[ObjectIdentifier(key)] as? Key.Value ?? Key.defaultValue
+//        }
+//        set {
+//            userDefined[ObjectIdentifier(key)] = newValue
+//        }
+//    }
+//}
+//#endif
+

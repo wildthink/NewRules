@@ -10,7 +10,7 @@ import NewRules
 
 struct DirectoryRewrite: Rule {
     
-    @Environment(\.template) var template
+    @Scope(\.template) var template
     var pin: Path
     var pout: Path
 
@@ -56,7 +56,7 @@ struct Xcodeproj: Builtin {
 }
 
 struct FileRewrite: Builtin {
-//    @Environment(\.template) var template
+//    @Scope(\.template) var template
 
     var pin: Path
     var pout: Path
@@ -111,7 +111,7 @@ extension EnvironmentValues {
 
 // MARK: Rule Modifiers
 struct LogModifier: RuleModifier {
-    @Environment(\.os_log) var os_log
+    @Scope(\.os_log) var os_log
     var msg: String
     
     func rules(_ content: Content) -> some Rule {
@@ -120,7 +120,7 @@ struct LogModifier: RuleModifier {
     }
 }
 extension Rule {
-    func os_log(_ msg: String) -> Modified {
+    func os_log(_ msg: String) -> some Rule {
         self.modifier(LogModifier(msg: msg))
     }
 }
@@ -139,7 +139,7 @@ struct ChangeDirectory: RuleModifier {
 }
 
 extension Rule {
-    func push(pin: Path? = nil, pout: Path? = nil) -> Modified {
+    func push(pin: Path? = nil, pout: Path? = nil) -> some Rule {
         self
             .modifier(ChangeDirectory(pin: pin, pout: pout))
     }

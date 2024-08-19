@@ -30,20 +30,6 @@ struct Test {
     }
 }
 
-struct ScopeValues {
-    private var values: [AnyHashable: Any] = [:]
-    
-    func _get<V>(key: String = #function, default dv: V,
-                 _file: String = #fileID, _line: Int = #line
-    ) -> V {
-        values[key] as? V ?? dv
-    }
-    
-    mutating func _set<V>(key: String = #function, _ value: V) {
-        values[key] = value
-    }
-}
-
 import SwiftUI
 
 extension ScopeValues {
