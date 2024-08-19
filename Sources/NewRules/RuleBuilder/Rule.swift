@@ -2,30 +2,17 @@ import Foundation
 
 public protocol Rule<Body> {
     associatedtype Body: Rule
-//    typealias Modified = ModifiedRule<Self>
     @RuleBuilder var body: Body { get }
 }
 
 public protocol BuiltinRule {
-    func run(environment: EnvironmentValues) throws
+    func run(environment: ScopeValues) throws
 }
 
 public typealias Builtin = BuiltinRule & Rule
 
-//public struct AnyRule: Builtin {
-//    var rule: any Rule
-//    
-//    public init<R: Rule>(rule: R) {
-//        self.rule = rule
-//    }
-//    
-//    public func run(environment: EnvironmentValues) throws {
-//        try rule.builtin.run(environment: environment)
-//    }
-//}
-
 public struct AnyBuiltin: Builtin {
-    let _run: (EnvironmentValues) throws -> ()
+    let _run: (ScopeValues) throws -> ()
     
     public init<R: Rule>(_ value: R) {
         self._run = { env in
@@ -45,7 +32,7 @@ public struct AnyBuiltin: Builtin {
         }
     }
 
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try _run(environment)
     }
 }
@@ -86,7 +73,7 @@ extension Rule {
 
 public struct EmptyRule: Builtin {
     public init() { }
-    public func run(environment: EnvironmentValues) { }
+    public func run(environment: ScopeValues) { }
 }
 
 public struct TraceRule: Builtin {
@@ -106,28 +93,10 @@ public struct TraceRule: Builtin {
         self.trace = call ?? { print($0.msg, $0.file, $0.line) }
     }
     
-    public func run(environment: EnvironmentValues) {
+    public func run(environment: ScopeValues) {
         trace(self)
     }
 }
-
-//public struct MissingRule: BuiltinRule, Rule {
-//    var file: String
-//    var line: Int
-//    
-//    public init(file: String = #fileID, line: Int = #line) {
-//        self.file = file
-//        self.line = line
-//    }
-//    
-//    public var errorDescription: String {
-//        "\(file):\(line)"
-//    }
-//    
-//    public func run(environment: EnvironmentValues) throws {
-//        throw RuleError.missing(errorDescription)
-//    }
-//}
 
 public struct Throw: Builtin {
     var error: Error
@@ -135,7 +104,7 @@ public struct Throw: Builtin {
     public init(error: Error) {
         self.error = error
     }
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         throw error
     }
 }
@@ -145,7 +114,7 @@ public enum RuleError: Error {
 }
 
 extension Optional: Builtin where Wrapped: Rule {
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try self?.builtin.run(environment: environment)
     }
 }
@@ -157,7 +126,7 @@ public struct RuleGroup<Content: Rule>: Builtin {
         self.content = content()
     }
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try content.builtin.run(environment: environment)
     }
 }
@@ -168,7 +137,7 @@ public struct Pair<L, R>: Builtin where L: Rule, R: Rule {
         self.value = (l,r)
     }
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try value.0.builtin.run(environment: environment)
         try value.1.builtin.run(environment: environment)
     }
@@ -178,7 +147,7 @@ public enum Choice<L, R>: Builtin where L: Rule, R: Rule {
     case left(L)
     case right(R)
 
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         switch self {
         case .left(let rule):
             try rule.builtin.run(environment: environment)
@@ -189,7 +158,7 @@ public enum Choice<L, R>: Builtin where L: Rule, R: Rule {
 }
 
 extension Array<any Rule>: Builtin {
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         for rule in self {
             try rule.builtin.run(environment: environment)
         }
@@ -203,25 +172,30 @@ public struct RuleArray: Builtin {
         self.content = rules
     }
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try content.builtin.run(environment: environment)
     }
 }
+
+// CANNOT USE "-> some Rule" for-loops to work
+//   static func buildExpression<R: Rule>(_ expression: R) -> R {
+//      expression
+//   }
+// will work BUT Rule extension modifying method will
+// be requied to return a concrete Rule type (i.e. ModifiedRule)
+// BUT using `AnyRule` to type erase the Rule at this point/level
+// (seems) to make everything build as expected, so no-harm no-foul,
+// almost. With AnyRule, you lose the ability to constrain ModifiedContent
+// extensions. <sigh>
+//   static func buildExpression<R: Rule>(_ expression: R) -> AnyRule {
+//      AnyRule(rule: expression)
+//   }
+// All that said, we provide a ForEach so we don't need buildArray(...)
 
 @resultBuilder
 public enum RuleBuilder {
     
     // MARK: Rule from Expression
-    // CANNOT USE "-> some Rule" for loops to work
-    // Return -> R will work BUT Rule extension modifying method will
-    // be requied to return a concrete Rule type (i.e. ModifiedRule)
-    // BUT using `AnyRule` to type erase the Rule at this point/level
-    // (seems) to make everything build as expected, so no-harm no-foul,
-    // almost. With AnyRule, you lose the ability to constrain ModifiedContent
-    // extensions. <sigh>
-    // public static func buildExpression<R: Rule>(_ expression: R) -> AnyRule {
-    //    AnyRule(rule: expression)
-    // }
     public static func buildExpression<R: Rule>(_ expression: R) -> some Rule {
         expression
     }
@@ -262,7 +236,7 @@ public enum RuleBuilder {
         .right(component)
     }
 
-    // Rule for an array of Rules. Useful for 'for' loops.
+// DO NOT USE: Useful for 'for' loops BUT see above NOTE
 //    public static func buildArray(_ components: [any Rule]) -> RuleArray {
 //        RuleArray(rules: components)
 //    }

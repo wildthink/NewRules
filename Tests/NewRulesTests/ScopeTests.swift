@@ -6,6 +6,7 @@
 //
 
 import Testing
+@testable import NewRules
 
 struct Test {
 
@@ -17,10 +18,10 @@ struct Test {
     }
     
     @Test func testWrapper() throws {
-        var tv = TestView()
+        let tv = TestView()
 //        print(tv.key, tv.testProp, tv.$testProp.str)
         tv.testProp = 43
-        print(tv.key, tv.testProp)
+        print(tv.key, tv.testProp as Any)
     }
 
     @Test func testDefaultValues() {
@@ -30,7 +31,7 @@ struct Test {
     }
 }
 
-import SwiftUI
+//import SwiftUIs
 
 extension ScopeValues {
     var version: String {
@@ -39,28 +40,28 @@ extension ScopeValues {
     }
 }
 
-//extension EnvironmentValues {
+//extension ScopeValues {
 //    @Entry
 //    var name: String = "jane"
 //}
 
 
-extension EnvironmentValues {
-    // @Entry
-    var name: String // = "jane"
-    {
-        get {
-            self[__Key_name.self]
-        }
-        set {
-            self[__Key_name.self] = newValue
-        }
-    }
-    private struct __Key_name: SwiftUICore.EnvironmentKey {
-        typealias Value = String
-        static var defaultValue: Value { "jane" }
-    }
-}
+//extension ScopeValues {
+//    // @Entry
+//    var name: String // = "jane"
+//    {
+//        get {
+//            self[__Key_name.self]
+//        }
+//        set {
+//            self[__Key_name.self] = newValue
+//        }
+//    }
+//    private struct __Key_name: SwiftUICore.ScopeKey {
+//        typealias Value = String
+//        static var defaultValue: Value { "jane" }
+//    }
+//}
  
 extension ScopeValues {
     

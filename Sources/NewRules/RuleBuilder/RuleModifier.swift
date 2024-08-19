@@ -12,7 +12,7 @@ public struct Content: Builtin {
         self.rule = rule
     }
 
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         try rule.builtin.run(environment: environment)
     }
 }
@@ -30,7 +30,7 @@ public struct ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
         self.modifier = modifier
     }
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         environment.install(on: modifier)
         try modifier
             .rules(.init(rule: content))
@@ -48,7 +48,7 @@ public struct _ModifiedRule<Content: Rule>: Builtin {
         self.modifier = modifier
     }
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         environment.install(on: modifier)
         try modifier
             .rules(.init(rule: content))

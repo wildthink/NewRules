@@ -42,7 +42,7 @@ struct DirectoryRewrite: Rule {
 }
 
 struct ErrorRule: Builtin {
-    func run(environment: EnvironmentValues) throws {
+    func run(environment: ScopeValues) throws {
         // throw error
     }
 }
@@ -51,7 +51,7 @@ struct Xcodeproj: Builtin {
     var pin: Path
     var pout: Path
     
-    func run(environment: EnvironmentValues) throws {
+    func run(environment: ScopeValues) throws {
     }
 }
 
@@ -61,7 +61,7 @@ struct FileRewrite: Builtin {
     var pin: Path
     var pout: Path
     
-    func run(environment: EnvironmentValues) throws {
+    func run(environment: ScopeValues) throws {
     }
     
 //    var body: some Rule {
@@ -71,18 +71,18 @@ struct FileRewrite: Builtin {
 
 // MARK: Enviroment Values
 
-//extension EnvironmentValues {
+//extension ScopeValues {
 //    @Entry var fileIO = FileIO()
 //}
 
-public struct FileIO: EnvironmentKey {
+public struct FileIO: ScopeKey {
     public static var defaultValue: Self = .init()
     
     public var pin: Path = "lhs"
     public var pout: Path = "rhs"
 }
 
-extension EnvironmentValues {
+extension ScopeValues {
     public var fileIO: FileIO {
         get { self[FileIO.self] }
         set { self[FileIO.self] = newValue }
@@ -90,7 +90,7 @@ extension EnvironmentValues {
 }
 
 // Template
-public struct Template: EnvironmentKey {
+public struct Template: ScopeKey {
     public static var defaultValue: Self = .init()
 
     public func rewrite(_ s: String) -> String {
@@ -102,7 +102,7 @@ public struct Template: EnvironmentKey {
     }
 }
 
-extension EnvironmentValues {
+extension ScopeValues {
     public var template: Template {
         get { self[Template.self] }
         set { self[Template.self] = newValue }

@@ -5,14 +5,12 @@
 //  Created by Jason Jobe on 12/6/22.
 //
 
-import SwiftUI
-
 public protocol DynamicValue {
-    func update(with: EnvironmentValues)
+    func update(with: ScopeValues)
 }
 
 public struct ScopeValues {
-    private var values: [AnyHashable: Any] = [:]
+    var values: [AnyHashable: Any] = [:]
     
     func _get<V>(key: String = #function, default dv: V,
                  _file: String = #fileID, _line: Int = #line
@@ -23,35 +21,46 @@ public struct ScopeValues {
     mutating func _set<V>(key: String = #function, _ value: V) {
         values[key] = value
     }
+    
+    subscript<V>(_ key: String, as t: V.Type = V.self) -> V? {
+        values[key] as? V
+    }
 }
 
 @propertyWrapper
 public struct Scope<Value>: SetEnvironment {
-    var keyPath: KeyPath<EnvironmentValues, Value>
+    var keyPath: KeyPath<ScopeValues, Value>
     @Box fileprivate var value: Value?
-    //    @Box fileprivate var values: EnvironmentValues?
+    //    @Box fileprivate var values: ScopeValues?
     
-    public init(_ keyPath: KeyPath<EnvironmentValues, Value>) {
+    public init(_ keyPath: KeyPath<ScopeValues, Value>) {
         self.keyPath = keyPath
     }
     
-    public init(wrappedValue: Value, _ keyPath: KeyPath<EnvironmentValues, Value>) {
+    public init(wrappedValue: Value, _ keyPath: KeyPath<ScopeValues, Value>) {
         self.keyPath = keyPath
         self.value = wrappedValue
     }
     
     public var wrappedValue: Value {
-        value ?? EnvironmentValues.defaultValues[keyPath: keyPath]
+        value ?? ScopeValues.defaultValues[keyPath: keyPath]
     }
     
-    func set(environment: EnvironmentValues) {
+    func set(environment: ScopeValues) {
         value = environment[keyPath: keyPath]
     }
 }
 
+extension ScopeValues {
+    /// This gives us access to all the defaultValues
+    static let defaultValues = ScopeValues()
+}
+
+#if UI
 @propertyWrapper
-public struct Model<Value>: DynamicProperty {
-    @StateObject private var box: Box<Value>
+public struct Model<Value>: DynamicValue {
+    
+    private var box: Box<Value>
     @Scope(\.self) var env
     
     public var wrappedValue: Value {
@@ -66,72 +75,8 @@ public struct Model<Value>: DynamicProperty {
         )
     }
     
-    public func update() {
+    public func update(with env: ScopeValues) {
         env.install(on: box.wrappedValue)
     }
 }
-
-//protocol EnvironmentSettable {
-//    func set(values: EnvironmentValues)
-//}
-
-// MARK: - objc.io
-//@propertyWrapper
-//struct _Scope<Value>: DynamicValue, DynamicProperty {
-//    var keyPath: KeyPath<EnvironmentValues, Value>
-//    var defaultValue: () -> Value
-//    @Box var value: Value? = nil
-//    
-//    init(wrappedValue defaultValue: Value, _ keyPath: KeyPath<EnvironmentValues, Value>) {
-//        self.keyPath = keyPath
-//        self.defaultValue = { defaultValue }
-//    }
-//    
-//    init(_ keyPath: KeyPath<EnvironmentValues, Value>) {
-//        self.keyPath = keyPath
-//        self.defaultValue = { EnvironmentValues.current[keyPath: keyPath] }
-//    }
-//    
-//    func update(with values: EnvironmentValues) {
-//        self.value = values[keyPath: keyPath]
-//    }
-//    
-//    var wrappedValue: Value {
-//        return value ?? defaultValue()
-//    }
-//}
-//
-//extension EnvironmentValues: @unchecked Sendable {
-//    @TaskLocal public static var current = Self()
-//}
-
-//extension EnvironmentValues {
-//    func install<A>(on obj: A) {
-//        let m = Mirror(reflecting: obj)
-//        for child in m.children {
-//            if let envProperty = (child.value as? EnvironmentSettable) {
-//                envProperty.set(values: self)
-//            }
-//        }
-//    }
-//}
-
-//@propertyWrapper
-//class ScopeValue<T> {
-//    var defaultValue: T
-//    
-//    var wrappedValue: T
-//    init(wrappedValue: T) {
-//        self.defaultValue = wrappedValue
-//        self.wrappedValue = wrappedValue
-//    }
-//}
-//
-//func sv() {
-//    @ScopeValue var flag: Bool = true
-//    print(flag)
-//}
-
-//protocol SetEnvironment {
-//    func set(environment: EnvironmentValues)
-//}
+#endif

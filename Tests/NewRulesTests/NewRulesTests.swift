@@ -6,7 +6,7 @@ final class NewRulesTests: XCTestCase {
      
     func testExample() throws {
         let rule = TestRule()
-        let env = EnvironmentValues()
+        let env = ScopeValues()
         try rule.builtin.run(environment: env)
 
         print(env)
@@ -14,7 +14,7 @@ final class NewRulesTests: XCTestCase {
 
     func testRewriter() throws {
         let rule = DirectoryRewrite(pin: "/Users/jason/dev/templates/AppUX/", pout: "/tmp")
-        let env = EnvironmentValues()
+        let env = ScopeValues()
         try rule.builtin.run(environment: env)
         
         print(env)

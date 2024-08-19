@@ -1,12 +1,11 @@
 //
-//  File.swift
+//  ForEach.swift
 //  
 //
 //  Created by Chris Eidhof on 01.06.21.
 //
 
 import Foundation
-import NewRules
 
 public struct ForEach<Element, Content: Rule>: Builtin {
     public init(_ data: [Element], @RuleBuilder content: @escaping (Element) -> Content) {
@@ -17,7 +16,7 @@ public struct ForEach<Element, Content: Rule>: Builtin {
     var data: [Element]
     var content: (Element) -> Content
     
-    public func run(environment: EnvironmentValues) throws {
+    public func run(environment: ScopeValues) throws {
         for element in data {
             try content(element).builtin.run(environment: environment)
         }
