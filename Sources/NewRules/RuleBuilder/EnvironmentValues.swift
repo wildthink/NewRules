@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 public protocol EnvironmentKey {
     associatedtype Value
@@ -26,6 +27,18 @@ public struct EnvironmentValues {
     }
 }
 
+// MARK: Logger Environment Value
+enum LoggerKey: EnvironmentKey {
+    static var defaultValue: Logger = Logger(subsystem: "com.wildthink", category: "rules")
+}
+extension EnvironmentValues {
+    public var os_log: Logger {
+        get { self[LoggerKey.self] }
+        set { self[LoggerKey.self] = newValue }
+    }
+}
+
+// MARK: Environment Implementation and Modifier Rule
 struct EnvironmentModifier<A, Content: Rule>: Builtin {
     init(content: Content, keyPath: WritableKeyPath<EnvironmentValues, A>, modify: @escaping (inout A) -> ()) {
         self.content = content
@@ -69,7 +82,7 @@ extension EnvironmentValues {
 }
 
 @propertyWrapper
-class Box<A> {
+class Box<A>: ObservableObject {
     var wrappedValue: A
     init(wrappedValue: A) {
         self.wrappedValue = wrappedValue

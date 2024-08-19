@@ -16,24 +16,10 @@ public struct ForEach<Element, Content: Rule>: Builtin {
     
     var data: [Element]
     var content: (Element) -> Content
-    var parallel: Bool = false // this can cause problems with the environment!
     
     public func run(environment: EnvironmentValues) throws {
-        if parallel {
-            let group = DispatchGroup()
-            let q = DispatchQueue.global()
-            for element in data {
-                group.enter()
-                q.async {
-                    try! content(element).builtin.run(environment: environment)
-                    group.leave()
-                }
-            }
-            group.wait()
-        } else {
-            for element in data {
-                try content(element).builtin.run(environment: environment)
-            }
+        for element in data {
+            try content(element).builtin.run(environment: environment)
         }
     }
 }

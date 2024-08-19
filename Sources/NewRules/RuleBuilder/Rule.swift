@@ -1,10 +1,28 @@
 import Foundation
 
+public protocol Rule<Body> {
+    associatedtype Body: Rule
+    typealias Modified = ModifiedRule<Self>
+    @RuleBuilder var body: Body { get }
+}
+
 public protocol BuiltinRule {
     func run(environment: EnvironmentValues) throws
 }
 
 public typealias Builtin = BuiltinRule & Rule
+
+public struct AnyRule: Builtin {
+    var rule: any Rule
+    
+    public init(rule: any Rule) {
+        self.rule = rule
+    }
+    
+    public func run(environment: EnvironmentValues) throws {
+        try rule.builtin.run(environment: environment)
+    }
+}
 
 public struct AnyBuiltin: Builtin {
     let _run: (EnvironmentValues) throws -> ()
@@ -59,11 +77,6 @@ extension RuleBuilder {
     }
 }
 
-public protocol Rule<Body> {
-    associatedtype Body: Rule
-    @RuleBuilder var body: Body { get }
-}
-
 extension Rule {
     public var builtin: BuiltinRule {
         if let x = self as? BuiltinRule { return x }
@@ -81,7 +94,7 @@ public struct TraceRule: Builtin {
     var file: String
     var line: Int
     
-    init(msg: String = "TRACE", file: String = #fileID, line: Int = #line) {
+    public init(msg: String = "TRACE", file: String = #fileID, line: Int = #line) {
         self.msg = msg
         self.file = file
         self.line = line
@@ -185,10 +198,15 @@ public enum RuleBuilder {
     // CANNOT USE "-> some Rule" for loops to work
     // Return -> R will work BUT Rule extension modifying method will
     // be requied to return a concrete Rule type (i.e. ModifiedRule)
-    // BUT using `AnyBuiltin` to type erase the Rule at this point/level
-    // (seems) to make everything build as expected, so no-harm no-foul
-    public static func buildExpression<R: Rule>(_ expression: R) -> AnyBuiltin {
-        AnyBuiltin(any: expression)
+    // BUT using `AnyRule` to type erase the Rule at this point/level
+    // (seems) to make everything build as expected, so no-harm no-foul,
+    // almost. With AnyRule, you lose the ability to constrain ModifiedContent
+    // extensions. <sigh>
+    // public static func buildExpression<R: Rule>(_ expression: R) -> AnyRule {
+    //    AnyRule(rule: expression)
+    // }
+    public static func buildExpression<R: Rule>(_ expression: R) -> R {
+        expression
     }
 
     // Optionals
@@ -228,7 +246,7 @@ public enum RuleBuilder {
     }
 
     // Rule for an array of Rules. Useful for 'for' loops.
-    public static func buildArray(_ components: [any Rule]) -> RuleArray {
-        RuleArray(rules: components)
-    }
+//    public static func buildArray(_ components: [any Rule]) -> RuleArray {
+//        RuleArray(rules: components)
+//    }
 }

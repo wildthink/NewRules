@@ -37,12 +37,12 @@ public struct _ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
     }
 }
 
-public struct ModifiedRule: Builtin {
+public struct ModifiedRule<Content: Rule>: Builtin {
     
-    var content: any Rule
+    var content: Content
     var modifier: any RuleModifier
     
-    public init(content: any Rule, modifier: any RuleModifier) {
+    public init(content: Content, modifier: any RuleModifier) {
         self.content = content
         self.modifier = modifier
     }
@@ -56,7 +56,7 @@ public struct ModifiedRule: Builtin {
 }
 
 extension Rule {
-    public func modifier<M: RuleModifier>(_ modifier: M) -> ModifiedRule {
+    public func modifier<M: RuleModifier>(_ modifier: M) -> ModifiedRule<Self> {
         ModifiedRule(content: self, modifier: modifier)
     }
 }

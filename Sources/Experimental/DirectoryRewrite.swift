@@ -10,122 +10,70 @@ import NewRules
 
 struct DirectoryRewrite: Rule {
     
-    @Environment(\.fileIO) var io
-    var template: Template = .init()
-    
-    func rewrite(_ p: Path) -> Path {
-        // __FILE__.swift -> p.swift
-        p
-    }
-    
-    @RuleBuilder
-    func branch(_ p: Path) -> some Rule {
-        switch p.uti {
-            case .directory:
-                Morph(modifier: EmptyModifier()) { m in
-                    DirectoryRewrite()
-                        .modifier(m)
-                        .push(pin: p, pout: template.rewrite(p))
-                }
-            case .text:
-                FileRewrite()
-                    .modifyEnvironment(keyPath: \.fileIO) { _ in }
-            case .unknown:
-                EmptyRule()
-        }
-    }
-    
-    let tp: Path = .test
-    
-    var body: some Rule {
-        
-        if true {
-            FileRewrite()
-                .modifyEnvironment(keyPath: \.fileIO) { _ in }
-        }
+    @Environment(\.template) var template
+    var pin: Path
+    var pout: Path
 
-        for p in tp.subs {
+    var body: some Rule {
+        TraceRule(msg: pin.name)
+
+        ForEach(pin.subs) { p in
+//        for p in pin.subs {
+            
+            let fin  = pin.appending(p)
+            let fout = template.rewrite(pin.appending(p))
+            let _ = fout.mkdirs()
+            
             switch p.uti {
+                case .xcodeproj:
+                    Xcodeproj(pin: fin, pout: fout)
+                        .os_log("Xcode \(fin)")
                 case .directory:
-                    Morph(modifier: EmptyModifier()) { m in
-                        DirectoryRewrite()
-                            .modifier(m)
-                            .push(pin: p, pout: template.rewrite(p))
-                    }
+                    DirectoryRewrite(pin: fin, pout: fout)
+                        .os_log("Directory \(fin)")
                 case .text:
-                    FileRewrite()
-                        .modifyEnvironment(keyPath: \.fileIO) { _ in }
+                    FileRewrite(pin: fin, pout: fout)
+                        .os_log("File \(fin)")
                 case .unknown:
-                    EmptyRule()
+                    ErrorRule()
             }
         }
     }
 }
 
-struct FileRewrite: Rule {
-    
-    var pin: Path = "lhs_file"
-    var pout: Path = "rhs_file"
-    
-    var body: some Rule {
-        MissingRule()
+struct ErrorRule: Builtin {
+    func run(environment: EnvironmentValues) throws {
+        // throw error
     }
 }
 
-// MARK: Rule Modifiers
-struct Morph<Content: Rule, Modifier: RuleModifier>: Rule {
-    var modifier: Modifier
-    @RuleBuilder var content: (Modifier) -> Content
+struct Xcodeproj: Builtin {
+    var pin: Path
+    var pout: Path
     
-    var body: some Rule {
-        content(modifier)
+    func run(environment: EnvironmentValues) throws {
     }
 }
 
-// MARK: Faux File Interfaces
-public enum UTI {
-    case directory, text
-    case unknown
+struct FileRewrite: Builtin {
+//    @Environment(\.template) var template
+
+    var pin: Path
+    var pout: Path
+    
+    func run(environment: EnvironmentValues) throws {
+    }
+    
+//    var body: some Rule {
+//        MissingRule()
+//    }
 }
 
-public struct Template {
-    public func rewrite(_ s: String) -> String {
-        s
-    }
-    
-    public func rewrite(_ p: Path) -> Path {
-        p
-    }
-    
-}
+// MARK: Enviroment Values
 
-public struct Path: ExpressibleByStringLiteral {
-    var name: String = "file"
-    var uti: UTI = .unknown
-    var subs: [Path] = []
-    mutating func append(_ p: Path) {
-        subs.append(p)
-    }
-    
-    init(_ name: String, uti: UTI = .unknown, subs: [Path] = []) {
-        self.name = name
-        self.uti = uti
-        self.subs = subs
-    }
-    
-    public init(stringLiteral value: String) {
-        name = value
-    }
-}
-
-extension Path {
-    static var test: Path =
-    Path("test", subs: [
-        Path("dir", uti: .directory),
-        Path("text", uti: .text),
-        Path("joker", uti: .unknown),
-    ])
-}
+//extension EnvironmentValues {
+//    @Entry var fileIO = FileIO()
+//}
 
 public struct FileIO: EnvironmentKey {
     public static var defaultValue: Self = .init()
@@ -141,22 +89,110 @@ extension EnvironmentValues {
     }
 }
 
+// Template
+public struct Template: EnvironmentKey {
+    public static var defaultValue: Self = .init()
+
+    public func rewrite(_ s: String) -> String {
+        s
+    }
+    
+    public func rewrite(_ p: Path) -> Path {
+        p
+    }
+}
+
+extension EnvironmentValues {
+    public var template: Template {
+        get { self[Template.self] }
+        set { self[Template.self] = newValue }
+    }
+}
+
+// MARK: Rule Modifiers
+struct LogModifier: RuleModifier {
+    @Environment(\.os_log) var os_log
+    var msg: String
+    
+    func rules(_ content: Content) -> some Rule {
+        os_log.debug("\(msg)")
+        return content
+    }
+}
+extension Rule {
+    func os_log(_ msg: String) -> Modified {
+        self.modifier(LogModifier(msg: msg))
+    }
+}
+
 struct ChangeDirectory: RuleModifier {
     var pin: Path?
     var pout: Path?
     
     func rules(_ content: Content) -> some Rule {
         content
-            .modifyEnvironment(keyPath: \.fileIO) { io in
-                if let pin { io.pin.append(pin) }
-                if let pout { io.pout.append(pout) }
-            }
+//            .modifyEnvironment(keyPath: \.fileIO) { io in
+//                if let pin { io.pin.append(pin) }
+//                if let pout { io.pout.append(pout) }
+//            }
     }
 }
+
 extension Rule {
-    func push(pin: Path? = nil, pout: Path? = nil) -> ModifiedRule {
+    func push(pin: Path? = nil, pout: Path? = nil) -> Modified {
         self
             .modifier(ChangeDirectory(pin: pin, pout: pout))
     }
 }
 
+
+struct Morph<Content: Rule, Modifier: RuleModifier>: Rule {
+    var modifier: Modifier
+    @RuleBuilder var content: (Modifier) -> Content
+    
+    var body: some Rule {
+        content(modifier)
+    }
+}
+
+// MARK: Faux File Interfaces
+public enum UTI {
+    case xcodeproj
+    case directory, text
+    case unknown
+}
+
+public struct Path: ExpressibleByStringLiteral {
+    var name: String = "file"
+    var uti: UTI = .unknown
+    var subs: [Path] = []
+    
+    func appending(_ p: Path) -> Path {
+        let p = Path(p.name)
+//        cp.subs.append(p)
+        return p
+    }
+    
+    init(_ name: String, uti: UTI = .unknown, subs: [Path] = []) {
+        self.name = name
+        self.uti = uti
+        self.subs = subs
+    }
+    
+    public init(stringLiteral value: String) {
+        name = value
+    }
+    
+    public func mkdirs() -> Path? {
+        self
+    }
+}
+
+extension Path {
+    static var test: Path =
+    Path("test", subs: [
+        Path("dir", uti: .directory),
+        Path("text", uti: .text),
+        Path("joker", uti: .unknown),
+    ])
+}
