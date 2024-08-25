@@ -14,7 +14,14 @@ final class NewRulesTests: XCTestCase {
 
     func testRewriter() throws {
         let fin: URL = "/Users/jason/dev/Constellation/templates/mac/DocumentApp"
-        let rule = DirectoryRewrite(pin: fin, pout: "/tmp/foo")
+//        let fin: URL = "/Users/jason/dev/Constellation/config"
+        let rule =
+                DirectoryRewrite(pin: fin, pout: "/tmp/foo")?
+            .modifyEnvironment(keyPath: \.template) {
+                $0.values = [
+                    "APP": "Demo"
+                ]
+            }
         let env = ScopeValues()
         try rule.builtin.run(environment: env)
         

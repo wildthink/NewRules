@@ -20,7 +20,7 @@ struct DirectoryRewrite: Rule {
     var pout: Path
 
     init?(pin: Path, pout: Path) {
-        guard pin.hasDirectoryPath, pout.hasDirectoryPath
+        guard pin.hasDirectoryPath //, pout.hasDirectoryPath
         else { return nil }
         
         self.pin = pin
@@ -28,30 +28,37 @@ struct DirectoryRewrite: Rule {
     }
     
     func directoryContents() -> [URL] {
-        (pin.directoryContents()?.allObjects as? [URL]) ?? []
+        pin.directoryContents() ?? []
+//        (pin.directoryContents()?.allObjects as? [URL]) ?? []
     }
     
     var body: some Rule {
 //        TraceRule(msg: pin.filePath)
 
+        let rout = template.rewrite(pout.appending(path: pin.lastPathComponent))
+//        let _ = rout.mkdirs()
+
         ForEach(directoryContents()) { (fin: URL) in
             
-            let fout = template.rewrite(pout.appending(path: fin.lastPathComponent))
-            let _ = fout.mkdirs()
+            let fout = template.rewrite(rout.appending(path: fin.lastPathComponent))
             
             switch fin.uti {
+                case _ where fin.isDotFile:
+                    EmptyRule()
                 case .pbxproj:
                     TemplateRewrite(pin: fin, pout: fout)
 //                        .os_log("Xcode project.pbxproj \(fin)")
                 case .directory:
+//                    let _ = fout.mkdirs()
                     DirectoryRewrite(pin: fin, pout: fout)
 //                        .os_log("Directory \(fin)")
                 case .text:
                     StencilRewrite(pin: fin, pout: fout)
 //                        .os_log("File \(fin)")
                 default:
-                    EmptyRule()
-                        .os_log("Unknown \(fin.uti)")
+                    TemplateRewrite(pin: fin, pout: fout)
+//                    EmptyRule()
+//                        .os_log("Unknown \(fin.uti)")
             }
         }
     }
@@ -78,11 +85,35 @@ struct StencilRewrite: Builtin {
     }
     
     func run(environment: ScopeValues) throws {
-        try FileManager.default.copyItem(at: pin, to: pout)
+        let txt = try String(contentsOf: pin)
+        let data = environment.template.rewrite(txt).data(using: .utf8)
+        let out = environment.template.rewrite(pout)
+        out.deletingLastPathComponent().mkdirs()
+//        FileManager.default.createFile(atPath: out.filePath, contents: data)
+        try data?.write(to: out)
     }
 }
 
 struct TemplateRewrite: Builtin {
+    var pin: Path
+    var pout: Path
+    
+    init(pin: Path, pout: Path) {
+        self.pin = pin
+        self.pout = pout
+    }
+    
+    func run(environment: ScopeValues) throws {
+        let txt = try String(contentsOf: pin)
+        let data = environment.template.rewrite(txt).data(using: .utf8)
+        let out = environment.template.rewrite(pout)
+        out.deletingLastPathComponent().mkdirs()
+        //        FileManager.default.createFile(atPath: out.filePath, contents: data)
+        try data?.write(to: out)
+    }
+}
+
+struct Copy: Builtin {
     var pin: Path
     var pout: Path
     
@@ -256,16 +287,24 @@ public typealias Path = URL
 
 extension URL {
     
+    var isDotFile: Bool {
+        filePath.contains("/.")
+    }
+    
     func mkdirs() {
         try? FileManager.default.createDirectory(at: self, withIntermediateDirectories: true)
     }
     
-    func directoryContents() -> FileManager.DirectoryEnumerator? {
-        FileManager.default
-            .enumerator(at: self,
-                        includingPropertiesForKeys:
-                            [.isDirectoryKey, .isPackageKey,
-                             .isRegularFileKey, .contentTypeKey])
+    func directoryContents() -> [URL]? {
+        try? FileManager.default
+            .contentsOfDirectory(at: self,
+                includingPropertiesForKeys:[.isDirectoryKey, .isPackageKey,
+                                            .isRegularFileKey, .contentTypeKey],
+                                 options: .skipsHiddenFiles)
+//            .enumerator(at: self,
+//                        includingPropertiesForKeys:
+//                            [.isDirectoryKey, .isPackageKey,
+//                             .isRegularFileKey, .contentTypeKey])
     }
     
     var uti: UTType? {
