@@ -19,9 +19,9 @@ struct DirectoryRewrite: Rule {
     var pin: URL
     var pout: URL
 
-    init(pin: URL, pout: URL) {        
-        self.pin = pin
-        self.pout = pout
+    init(in fin: URL, out: URL) {
+        self.pin = fin
+        self.pout = out
     }
     
     func directoryContents() -> [URL] {
@@ -38,17 +38,17 @@ struct DirectoryRewrite: Rule {
 
             switch fin.uti {
                 case .pbxproj:
-                    TemplateRewrite(pin: fin, pout: fout)
+                    TemplateRewrite(in: fin, out: fout)
                 case .directory:
-                    DirectoryRewrite(pin: fin, pout: fout)
+                    DirectoryRewrite(in: fin, out: fout)
                 case .text:
-                    TemplateRewrite(pin: fin, pout: fout)
+                    TemplateRewrite(in: fin, out: fout)
                 case .propertyList:
-                    TemplateRewrite(pin: fin, pout: fout)
+                    TemplateRewrite(in: fin, out: fout)
                 default:
                     // Copy DOES NOT rewrite the file names
                     let cp = template.rewrite(fout)
-                    Copy(pin: fin, pout: cp)
+                    Copy(in: fin, out: cp)
             }
         }
     }
@@ -63,9 +63,9 @@ struct TemplateRewrite: Builtin {
     var pin: URL
     var pout: URL
     
-    init(pin: URL, pout: URL) {
+    init(in pin: URL, out: URL) {
         self.pin = pin
-        self.pout = pout
+        self.pout = out
     }
     
     func run(environment: ScopeValues) throws {
@@ -81,9 +81,9 @@ struct Copy: Builtin {
     var pin: URL
     var pout: URL
     
-    init(pin: URL, pout: URL) {
+    init(in pin: URL, out: URL) {
         self.pin = pin
-        self.pout = pout
+        self.pout = out
     }
     
     func run(environment: ScopeValues) throws {

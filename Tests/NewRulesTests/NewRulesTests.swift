@@ -14,8 +14,11 @@ final class NewRulesTests: XCTestCase {
 
     func testRewriter() throws {
         let fin: URL = "/Users/jason/dev/Constellation/templates/mac/DocumentApp"
+        let output: URL = "/tmp/foo"
+        
+        try FileManager.default.removeItem(at: output)
         let rule =
-            DirectoryRewrite(pin: fin, pout: "/tmp/foo")
+        DirectoryRewrite(in: fin, out: output)
                 .modifyEnvironment(keyPath: \.template) {
                     $0.values = [
                         "APP": "Demo",
