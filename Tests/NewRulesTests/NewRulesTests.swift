@@ -4,22 +4,22 @@ import XCTest
 
 final class NewRulesTests: XCTestCase {
      
-//    func testExample() throws {
-//        let rule = TestRule()
-//        let env = ScopeValues()
-//        try rule.builtin.run(environment: env)
-//
-//        print(env)
-//    }
+    func testExample() throws {
+        let rule = TestRule()
+        let env = ScopeValues()
+        try rule.builtin.run(environment: env)
+
+        print(env)
+    }
 
     func testRewriter() throws {
         let fin: URL = "/Users/jason/dev/Constellation/templates/mac/DocumentApp"
-//        let fin: URL = "/Users/jason/dev/Constellation/config"
         let rule =
                 DirectoryRewrite(pin: fin, pout: "/tmp/foo")?
             .modifyEnvironment(keyPath: \.template) {
                 $0.values = [
-                    "APP": "Demo"
+                    "APP": "Demo",
+                    "NOW": Date().formatted(date: .abbreviated, time: .shortened),
                 ]
             }
         let env = ScopeValues()
@@ -35,7 +35,7 @@ final class NewRulesTests: XCTestCase {
         else { return }
         for s in seq {
             if let u = s as? URL {
-                print(u, u.isFileURL, u.hasDirectoryPath, u.uti)
+                print(u, u.isFileURL, u.hasDirectoryPath, u.uti as Any)
             } else {
                 print(type(of: s), s)
             }
@@ -68,104 +68,53 @@ struct RuleBox<Content: Rule>: Rule {
     }
 }
 
-//extension RuleBuilder {
-//    static func buildExpression(_ expression: TestRule.Opt) -> some Rule {
-//        EmptyRule()
-//    }
-//}
+extension RuleBuilder {
+    static func buildExpression(_ expression: TestRule.Opt) -> some Rule {
+        EmptyRule()
+    }
+}
 
-//struct TestRule: Rule {
-//    enum Opt { case a, b }
-//    
-//    let tp: Path = .test
-//    
-//    func foo() -> some Rule {
-//        self.emptyModifier()
-//    }
-//    
-//    func v(_ o: Opt) -> Opt { o }
-//    
-//    @RuleBuilder
-//    func bar() -> some Rule {
-//        EmptyRule()
-//        v(.a)
-//        v(.b)
-//        EmptyRule()
-//    }
-//    
-//    var body: some Rule {
-//        ForEach(tp.subs) { p in
-//            switch p.uti {
-//                case .xcodeproj:
-//                    TraceRule(msg: p.name)
-//                case .directory:
-//                    TraceRule(msg: p.name)
-//                        .modifier(EmptyModifier())
-//                       .erase()
-//                case .text:
-//                    RuleBox {
-//                        TraceRule(msg: p.name)
-//                            .modifier(EmptyModifier())
-//                            .erase()
-//                    }
-//                    .trace("okay")
-//                case .unknown:
-//                    TraceRule(msg: p.name)
-//                        .emptyModifier()
-//             }
-//        }
-//    }
-//}
-
-//struct TestRuleII: Rule {
-//    var opt: Opts = .a
-//    
-//    var body: some Rule {
-//        EmptyRule()
-//        for n in 0..<5 {
-//            let _ = print(n)
-//            EmptyRule()
-//        }
-//        if true {
-//            FileRewrite()
-//        } else {
-//            branch("b1")
-//        }
-//        switch opt {
-//            case .a: EmptyRule()
-//            case .b: TestRule().modifier(EmptyModifier())
-//        }
-//        EmptyRule()
-//    }
-//    
-//    @RuleBuilder
-//    func branch(_ p: Path) -> some Rule {
-//        switch p.uti {
-//            case .directory:
-//                DirectoryRewrite()
-//            case .text:
-//                FileRewrite()
-//            case .unknown:
-//                EmptyRule()
-//        }
-//    }
-//    
-//}
-
-enum Opts { case a, b }
-//@RuleBuilder
-//func sampler(opt: Opts) -> some Rule {
-//    EmptyRule()
-//    for n in 0..<5 {
-//        let _ = print(n)
-//        EmptyRule()
-//    }
-//    if true {
-//        FileRewrite()
-//    }
-//    switch opt {
-//        case .a: EmptyRule()
-//        case .b: TestRule().modifier(EmptyModifier())
-//    }
-//    EmptyRule()
-//}
+struct TestRule: Rule {
+    enum Opt { case a, b }
+    
+    let tp: Path = "https://example.com"
+    
+    func foo() -> some Rule {
+        self.emptyModifier()
+    }
+    
+    func v(_ o: Opt) -> Opt { o }
+    
+    @RuleBuilder
+    func bar() -> some Rule {
+        EmptyRule()
+        v(.a)
+        v(.b)
+        EmptyRule()
+    }
+    
+    func directoryContents() -> [URL] {
+        (try? tp.directoryContents()) ?? []
+    }
+    
+    var body: some Rule {
+        ForEach(directoryContents()) { p in
+            switch p.uti {
+                case .directory:
+                    TraceRule(msg: p.filePath)
+                        .modifier(EmptyModifier())
+                       .erase()
+                case .text:
+                    RuleBox {
+                        TraceRule(msg: p.filePath)
+                            .modifier(EmptyModifier())
+                            .erase()
+                    }
+                    .trace("okay")
+                default:
+                    TraceRule(msg: p.filePath)
+                        .emptyModifier()
+             }
+        }
+    }
+}
