@@ -16,13 +16,10 @@ public extension UTType {
 struct DirectoryRewrite: Rule {
     
     @Scope(\.template) var template
-    var pin: Path
-    var pout: Path
+    var pin: URL
+    var pout: URL
 
-    init?(pin: Path, pout: Path) {
-        guard pin.hasDirectoryPath
-        else { return nil }
-        
+    init(pin: URL, pout: URL) {        
         self.pin = pin
         self.pout = pout
     }
@@ -37,20 +34,21 @@ struct DirectoryRewrite: Rule {
 
         ForEach(directoryContents()) { (fin: URL) in
             
-//            let fout = template.rewrite(rout.appending(path: fin.lastPathComponent))
             let fout = rout.appending(path: fin.lastPathComponent)
 
             switch fin.uti {
-//                case _ where fin.isDotFile:
-//                    EmptyRule()
                 case .pbxproj:
                     TemplateRewrite(pin: fin, pout: fout)
                 case .directory:
                     DirectoryRewrite(pin: fin, pout: fout)
                 case .text:
                     TemplateRewrite(pin: fin, pout: fout)
-                default:
+                case .propertyList:
                     TemplateRewrite(pin: fin, pout: fout)
+                default:
+                    // Copy DOES NOT rewrite the file names
+                    let cp = template.rewrite(fout)
+                    Copy(pin: fin, pout: cp)
             }
         }
     }
@@ -61,35 +59,11 @@ func ~= (pattern: UTType?, value: UTType?) -> Bool {
     return value.conforms(to: pattern)
 }
 
-struct ErrorRule: Builtin {
-    func run(environment: ScopeValues) throws {
-        // throw error
-    }
-}
-
-struct StencilRewrite: Builtin {
-    var pin: Path
-    var pout: Path
-    
-    init(pin: Path, pout: Path) {
-        self.pin = pin
-        self.pout = pout
-    }
-    
-    func run(environment: ScopeValues) throws {
-        let txt = try String(contentsOf: pin)
-        let data = environment.template.rewrite(txt).data(using: .utf8)
-        let out = environment.template.rewrite(pout)
-        out.deletingLastPathComponent().mkdirs()
-        try data?.write(to: out)
-    }
-}
-
 struct TemplateRewrite: Builtin {
-    var pin: Path
-    var pout: Path
+    var pin: URL
+    var pout: URL
     
-    init(pin: Path, pout: Path) {
+    init(pin: URL, pout: URL) {
         self.pin = pin
         self.pout = pout
     }
@@ -104,39 +78,21 @@ struct TemplateRewrite: Builtin {
 }
 
 struct Copy: Builtin {
-    var pin: Path
-    var pout: Path
+    var pin: URL
+    var pout: URL
     
-    init(pin: Path, pout: Path) {
+    init(pin: URL, pout: URL) {
         self.pin = pin
         self.pout = pout
     }
     
     func run(environment: ScopeValues) throws {
+        pout.deletingLastPathComponent().mkdirs()
         try FileManager.default.copyItem(at: pin, to: pout)
     }
 }
 
 // MARK: Enviroment Values
-
-//extension ScopeValues {
-//    @Entry var fileIO = FileIO()
-//}
-
-//public struct FileIO: ScopeKey {
-//    public static var defaultValue: Self = .init()
-//    
-//    public var pin: Path = "lhs"
-//    public var pout: Path = "rhs"
-//}
-
-//extension ScopeValues {
-//    public var fileIO: FileIO {
-//        get { self[FileIO.self] }
-//        set { self[FileIO.self] = newValue }
-//    }
-//}
-
 // Template
 public struct Template: ScopeKey {
     public static var defaultValue: Self = .init()
@@ -149,11 +105,11 @@ public struct Template: ScopeKey {
             .substituteKeys(del: "--", using: values)
     }
     
-    public func rewrite(_ p: Path) -> Path {
+    public func rewrite(_ p: URL) -> URL {
         let new = p.filePath
             .substituteKeys(del: "__", using: values)
             .substituteKeys(del: "--", using: values)
-        return Path(fileURLWithPath: new)
+        return URL(fileURLWithPath: new)
     }
 }
 
@@ -164,54 +120,8 @@ extension ScopeValues {
     }
 }
 
-// MARK: Rule Modifiers
-struct LogModifier: RuleModifier {
-    @Scope(\.os_log) var os_log
-    var msg: String
-    
-    func rules(_ content: Content) -> some Rule {
-        os_log.debug("\(msg)")
-        return content
-    }
-}
-extension Rule {
-    func os_log(_ msg: String) -> some Rule {
-        self.modifier(LogModifier(msg: msg))
-    }
-}
-
-//struct ChangeDirectory: RuleModifier {
-//    var pin: Path?
-//    var pout: Path?
-//    
-//    func rules(_ content: Content) -> some Rule {
-//        content
-////            .modifyEnvironment(keyPath: \.fileIO) { io in
-////                if let pin { io.pin.append(pin) }
-////                if let pout { io.pout.append(pout) }
-////            }
-//    }
-//}
-
-//extension Rule {
-//    func push(pin: Path? = nil, pout: Path? = nil) -> some Rule {
-//        self
-//            .modifier(ChangeDirectory(pin: pin, pout: pout))
-//    }
-//}
-
-
-struct Morph<Content: Rule, Modifier: RuleModifier>: Rule {
-    var modifier: Modifier
-    @RuleBuilder var content: (Modifier) -> Content
-    
-    var body: some Rule {
-        content(modifier)
-    }
-}
-
+// MARK: URL Extensions
 import UniformTypeIdentifiers
-public typealias Path = URL
 
 extension URL {
     
@@ -247,6 +157,7 @@ extension URL: @retroactive ExpressibleByStringLiteral {
     }
 }
 
+// MARK: String Templating Extensions
 public extension String {
     // Xcode templates use delimiters -- and __
     func substituteKeys(del: String, using mapping: [String: String]) -> String {

@@ -15,13 +15,13 @@ final class NewRulesTests: XCTestCase {
     func testRewriter() throws {
         let fin: URL = "/Users/jason/dev/Constellation/templates/mac/DocumentApp"
         let rule =
-                DirectoryRewrite(pin: fin, pout: "/tmp/foo")?
-            .modifyEnvironment(keyPath: \.template) {
-                $0.values = [
-                    "APP": "Demo",
-                    "NOW": Date().formatted(date: .abbreviated, time: .shortened),
-                ]
-            }
+            DirectoryRewrite(pin: fin, pout: "/tmp/foo")
+                .modifyEnvironment(keyPath: \.template) {
+                    $0.values = [
+                        "APP": "Demo",
+                        "NOW": Date().formatted(date: .abbreviated, time: .shortened),
+                    ]
+                }
         let env = ScopeValues()
         try rule.builtin.run(environment: env)
         
@@ -77,7 +77,7 @@ extension RuleBuilder {
 struct TestRule: Rule {
     enum Opt { case a, b }
     
-    let tp: Path = "https://example.com"
+    let tp: URL = "https://example.com"
     
     func foo() -> some Rule {
         self.emptyModifier()
