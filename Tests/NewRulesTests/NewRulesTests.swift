@@ -4,20 +4,35 @@ import XCTest
 
 final class NewRulesTests: XCTestCase {
      
-    func testExample() throws {
-        let rule = TestRule()
-        let env = ScopeValues()
-        try rule.builtin.run(environment: env)
-
-        print(env)
-    }
+//    func testExample() throws {
+//        let rule = TestRule()
+//        let env = ScopeValues()
+//        try rule.builtin.run(environment: env)
+//
+//        print(env)
+//    }
 
     func testRewriter() throws {
-        let rule = DirectoryRewrite(pin: "/Users/jason/dev/templates/AppUX/", pout: "/tmp")
+        let fin: URL = "/Users/jason/dev/Constellation/templates/mac/DocumentApp"
+        let rule = DirectoryRewrite(pin: fin, pout: "/tmp/foo")
         let env = ScopeValues()
         try rule.builtin.run(environment: env)
         
         print(env)
+    }
+    
+    func testDirectoryIterator() throws {
+        let url: URL = "/tmp"
+        
+        guard let seq = FileManager.default.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey, .isPackageKey, .isRegularFileKey, .contentTypeKey])
+        else { return }
+        for s in seq {
+            if let u = s as? URL {
+                print(u, u.isFileURL, u.hasDirectoryPath, u.uti)
+            } else {
+                print(type(of: s), s)
+            }
+        }
     }
 }
 
@@ -46,38 +61,54 @@ struct RuleBox<Content: Rule>: Rule {
     }
 }
 
-struct TestRule: Rule {
-    enum Opt { case a, b }
-    
-    let tp: Path = .test
-    
-    func foo() -> some Rule {
-        self.emptyModifier()
-    }
-    
-    var body: some Rule {
-        ForEach(tp.subs) { p in
-            switch p.uti {
-                case .xcodeproj:
-                    TraceRule(msg: p.name)
-                case .directory:
-                    TraceRule(msg: p.name)
-                        .modifier(EmptyModifier())
-                       .erase()
-                case .text:
-                    RuleBox {
-                        TraceRule(msg: p.name)
-                            .modifier(EmptyModifier())
-                            .erase()
-                    }
-                    .trace("okay")
-                case .unknown:
-                    TraceRule(msg: p.name)
-                        .emptyModifier()
-             }
-        }
-    }
-}
+//extension RuleBuilder {
+//    static func buildExpression(_ expression: TestRule.Opt) -> some Rule {
+//        EmptyRule()
+//    }
+//}
+
+//struct TestRule: Rule {
+//    enum Opt { case a, b }
+//    
+//    let tp: Path = .test
+//    
+//    func foo() -> some Rule {
+//        self.emptyModifier()
+//    }
+//    
+//    func v(_ o: Opt) -> Opt { o }
+//    
+//    @RuleBuilder
+//    func bar() -> some Rule {
+//        EmptyRule()
+//        v(.a)
+//        v(.b)
+//        EmptyRule()
+//    }
+//    
+//    var body: some Rule {
+//        ForEach(tp.subs) { p in
+//            switch p.uti {
+//                case .xcodeproj:
+//                    TraceRule(msg: p.name)
+//                case .directory:
+//                    TraceRule(msg: p.name)
+//                        .modifier(EmptyModifier())
+//                       .erase()
+//                case .text:
+//                    RuleBox {
+//                        TraceRule(msg: p.name)
+//                            .modifier(EmptyModifier())
+//                            .erase()
+//                    }
+//                    .trace("okay")
+//                case .unknown:
+//                    TraceRule(msg: p.name)
+//                        .emptyModifier()
+//             }
+//        }
+//    }
+//}
 
 //struct TestRuleII: Rule {
 //    var opt: Opts = .a

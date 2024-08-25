@@ -8,12 +8,19 @@
 import Foundation
 
 public struct ForEach<Element, Content: Rule>: Builtin {
+    
     public init(_ data: [Element], @RuleBuilder content: @escaping (Element) -> Content) {
         self.data = data
         self.content = content
     }
     
-    var data: [Element]
+    public init<C: Collection<Element>>(_ data: C, @RuleBuilder content: @escaping (Element) -> Content) {
+        self.data = data
+        self.content = content
+    }
+
+    var data: any Collection<Element>
+    //[Element]
     var content: (Element) -> Content
     
     public func run(environment: ScopeValues) throws {
