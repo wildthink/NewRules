@@ -14,17 +14,19 @@ final class NewRulesTests: XCTestCase {
 
     func testRewriter() throws {
         let fin: URL = "/Users/jason/dev/Constellation/templates/mac/DocumentApp"
-        let output: URL = "/tmp/foo"
+        let output: URL = "/tmp/Demo"
         
+        // FOR TEST Purposes ONLY
         try FileManager.default.removeItem(at: output)
+        
         let rule =
         DirectoryRewrite(in: fin, out: output)
-                .modifyEnvironment(keyPath: \.template) {
-                    $0.values = [
-                        "APP": "Demo",
-                        "NOW": Date().formatted(date: .abbreviated, time: .shortened),
-                    ]
-                }
+            .template(merge: [
+                "APP": "Demo",
+                "NOW": Date().formatted(date: .abbreviated, time: .shortened),
+            ])
+            .template(set: "COPYRIGHT", to: "See project License")
+
         let env = ScopeValues()
         try rule.builtin.run(environment: env)
         
@@ -42,6 +44,26 @@ final class NewRulesTests: XCTestCase {
             } else {
                 print(type(of: s), s)
             }
+        }
+    }
+}
+
+extension Rule {
+    
+    @warn_unqualified_access
+    func template<S: CustomStringConvertible>(
+        set key: String, to value: S
+    ) -> some Rule {
+        modifyEnvironment(keyPath: \.template) {
+            $0.values[key] = value.description
+        }
+    }
+
+    @warn_unqualified_access
+    func template(merge: [String:CustomStringConvertible]) -> some Rule {
+        modifyEnvironment(keyPath: \.template) {
+            let values = merge.map { ($0.key, $0.value.description) }
+            $0.values.merge(values, uniquingKeysWith: { $1 })
         }
     }
 }

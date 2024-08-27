@@ -29,26 +29,27 @@ struct DirectoryRewrite: Rule {
     }
     
     var body: some Rule {
-
-        let rout = template.rewrite(pout.appending(path: pin.lastPathComponent))
-
+        
         ForEach(directoryContents()) { (fin: URL) in
             
-            let fout = rout.appending(path: fin.lastPathComponent)
+            let fout = template.rewrite(pout.appending(path: fin.lastPathComponent))
 
             switch fin.uti {
                 case .pbxproj:
                     TemplateRewrite(in: fin, out: fout)
-                case .directory:
+                case .folder:
                     DirectoryRewrite(in: fin, out: fout)
                 case .text:
                     TemplateRewrite(in: fin, out: fout)
                 case .propertyList:
                     TemplateRewrite(in: fin, out: fout)
+                case _ where fin.pathExtension == "xcassets":
+                    Copy(in: fin, out: fout)
+                case .directory, .package:
+                    DirectoryRewrite(in: fin, out: fout)
                 default:
-                    // Copy DOES NOT rewrite the file names
-                    let cp = template.rewrite(fout)
-                    Copy(in: fin, out: cp)
+                    TraceRule(msg: "Copy \(fin.filePath) to \(fout.filePath)")
+                    Copy(in: fin, out: fout)
             }
         }
     }
@@ -71,9 +72,8 @@ struct TemplateRewrite: Builtin {
     func run(environment: ScopeValues) throws {
         let txt = try String(contentsOf: pin)
         let data = environment.template.rewrite(txt).data(using: .utf8)
-        let out = environment.template.rewrite(pout)
-        out.deletingLastPathComponent().mkdirs()
-        try data?.write(to: out)
+        try pout.deletingLastPathComponent().mkdirs()
+        try data?.write(to: pout)
     }
 }
 
@@ -87,7 +87,7 @@ struct Copy: Builtin {
     }
     
     func run(environment: ScopeValues) throws {
-        pout.deletingLastPathComponent().mkdirs()
+        try pout.deletingLastPathComponent().mkdirs()
         try FileManager.default.copyItem(at: pin, to: pout)
     }
 }
@@ -129,8 +129,8 @@ extension URL {
         filePath.contains("/.")
     }
     
-    func mkdirs() {
-        try? FileManager.default.createDirectory(at: self, withIntermediateDirectories: true)
+    func mkdirs() throws {
+        try FileManager.default.createDirectory(at: self, withIntermediateDirectories: true)
     }
     
     func directoryContents() throws -> [URL] {
