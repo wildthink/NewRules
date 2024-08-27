@@ -8,72 +8,73 @@
 import Foundation
 import NewRules
 
-public extension UTType {
-    static var pbxproj: UTType =
-        UTType(filenameExtension: "pbxproj", conformingTo: .text)!
-}
-
-struct DirectoryRewrite: Rule {
+struct Rewrite: Rule {
     
     @Scope(\.template) var template
     var pin: URL
     var pout: URL
-
+    
     init(in fin: URL, out: URL) {
         self.pin = fin
         self.pout = out
     }
     
-    func directoryContents() -> [URL] {
-        (try? pin.directoryContents()) ?? []
-    }
-    
     var body: some Rule {
         
-        ForEach(directoryContents()) { (fin: URL) in
-            
-            let fout = template.rewrite(pout.appending(path: fin.lastPathComponent))
+        let pout = template.rewrite(pout)
+        
+        switch pin.uti {
+            case .pbxproj:
+                TemplateRewrite(in: pin, out: pout)
 
-            switch fin.uti {
-                case .pbxproj:
-                    TemplateRewrite(in: fin, out: fout)
-                case .folder:
-                    DirectoryRewrite(in: fin, out: fout)
-                case .text:
-                    TemplateRewrite(in: fin, out: fout)
-                case .propertyList:
-                    TemplateRewrite(in: fin, out: fout)
-                case _ where fin.pathExtension == "xcassets":
-                    Copy(in: fin, out: fout)
-                case .directory, .package:
-                    DirectoryRewrite(in: fin, out: fout)
-                default:
-                    TraceRule(msg: "Copy \(fin.filePath) to \(fout.filePath)")
-                    Copy(in: fin, out: fout)
-            }
+            case .folder:
+                folder(in: pin, out: pout)
+
+            case .text:
+                TemplateRewrite(in: pin, out: pout)
+
+            case .propertyList:
+                TemplateRewrite(in: pin, out: pout)
+
+            case _ where pin.pathExtension == "xcassets":
+                Copy(in: pin, out: pout)
+
+            case .directory, .package:
+                folder(in: pin, out: pout)
+
+            default:
+                TraceRule(msg: "Copy \(pin.filePath) to \(pout.filePath)")
+                Copy(in: pin, out: pout)
+        }
+    }
+    
+    func folder(in fin: URL, out fout: URL) -> some Rule {
+        DirectoryRewrite(in: fin, out: fout) {
+            Rewrite(in: $0, out: $1)
         }
     }
 }
 
-func ~= (pattern: UTType?, value: UTType?) -> Bool {
-    guard let pattern, let value else { return false }
-    return value.conforms(to: pattern)
-}
-
-struct TemplateRewrite: Builtin {
+struct DirectoryRewrite<Content: Rule>: Rule {
+    
+    @Scope(\.template) var template
     var pin: URL
     var pout: URL
+    @RuleBuilder var content: (URL, URL) -> Content
     
-    init(in pin: URL, out: URL) {
+    init(in pin: URL, out pout: URL, content: @escaping (URL, URL) -> Content) {
         self.pin = pin
-        self.pout = out
+        self.pout = pout
+        self.content = content
     }
-    
-    func run(environment: ScopeValues) throws {
-        let txt = try String(contentsOf: pin)
-        let data = environment.template.rewrite(txt).data(using: .utf8)
-        try pout.deletingLastPathComponent().mkdirs()
-        try data?.write(to: pout)
+
+    var body: some Rule {
+        if let directoryFiles = try? pin.directoryContents() {
+            ForEach(directoryFiles) { (fin: URL) in
+                let fout = template.rewrite(pout.appending(path: fin.lastPathComponent))
+                content(fin, fout)
+            }
+        }
     }
 }
 
@@ -92,43 +93,21 @@ struct Copy: Builtin {
     }
 }
 
-// MARK: Enviroment Values
-// Template
-public struct Template: ScopeKey {
-    public static var defaultValue: Self = .init()
-
-    public var values: [String: String] = [:]
-    
-    public func rewrite(_ str: String) -> String {
-        str
-            .substituteKeys(del: "__", using: values)
-            .substituteKeys(del: "--", using: values)
-    }
-    
-    public func rewrite(_ p: URL) -> URL {
-        let new = p.filePath
-            .substituteKeys(del: "__", using: values)
-            .substituteKeys(del: "--", using: values)
-        return URL(fileURLWithPath: new)
-    }
-}
-
-extension ScopeValues {
-    public var template: Template {
-        get { self[Template.self] }
-        set { self[Template.self] = newValue }
-    }
-}
-
 // MARK: URL Extensions
 import UniformTypeIdentifiers
 
+public extension UTType {
+    static var pbxproj: UTType =
+    UTType(filenameExtension: "pbxproj", conformingTo: .text)!
+}
+
+func ~= (pattern: UTType?, value: UTType?) -> Bool {
+    guard let pattern, let value else { return false }
+    return value.conforms(to: pattern)
+}
+
 extension URL {
-    
-    var isDotFile: Bool {
-        filePath.contains("/.")
-    }
-    
+
     func mkdirs() throws {
         try FileManager.default.createDirectory(at: self, withIntermediateDirectories: true)
     }
@@ -154,29 +133,5 @@ extension URL {
 extension URL: @retroactive ExpressibleByStringLiteral {
     public init(stringLiteral value: String) {
         self = URL(fileURLWithPath: value)
-    }
-}
-
-// MARK: String Templating Extensions
-public extension String {
-    // Xcode templates use delimiters -- and __
-    func substituteKeys(del: String, using mapping: [String: String]) -> String {
-        let input = self
-        var result = input
-        let pattern = "\(del)([a-zA-Z0-9_]+)\(del)"
-        
-        let regex = try! NSRegularExpression(pattern: pattern, options: [])
-        let matches = regex.matches(in: input, options: [], range: NSRange(location: 0, length: input.utf16.count))
-        
-        let trims = CharacterSet(charactersIn: del)
-        for match in matches.reversed() {
-            if let range = Range(match.range, in: input) {
-                let key = String(input[range]).trimmingCharacters(in: trims)
-                if let substitution = mapping[key] {
-                    result.replaceSubrange(range, with: substitution)
-                }
-            }
-        }
-        return result
     }
 }

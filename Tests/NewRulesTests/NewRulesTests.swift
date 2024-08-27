@@ -2,6 +2,16 @@ import XCTest
 @testable import NewRules
 @testable import Experimental
 
+extension Rule {
+    func run(environment: ScopeValues) throws {
+        try self.builtin.run(environment: environment)
+    }
+    
+    func run() throws {
+        try self.builtin.run(environment: ScopeValues())
+    }
+}
+
 final class NewRulesTests: XCTestCase {
      
     func testExample() throws {
@@ -14,23 +24,22 @@ final class NewRulesTests: XCTestCase {
 
     func testRewriter() throws {
         let fin: URL = "/Users/jason/dev/Constellation/templates/mac/DocumentApp"
-        let output: URL = "/tmp/Demo"
+        let output: URL = "/tmp/Demo_ii"
         
         // FOR TEST Purposes ONLY
-        try FileManager.default.removeItem(at: output)
+        try? FileManager.default.removeItem(at: output)
+        
+        let date = Date(timeIntervalSince1970: 0)
+            .formatted(date: .abbreviated, time: .shortened)
         
         let rule =
-        DirectoryRewrite(in: fin, out: output)
+        Rewrite(in: fin, out: output)
             .template(merge: [
                 "APP": "Demo",
-                "NOW": Date().formatted(date: .abbreviated, time: .shortened),
+                "NOW": date,
             ])
             .template(set: "COPYRIGHT", to: "See project License")
-
-        let env = ScopeValues()
-        try rule.builtin.run(environment: env)
-        
-        print(env)
+        try rule.run()
     }
     
     func testDirectoryIterator() throws {
