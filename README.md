@@ -7,4 +7,4 @@
 
 # NewRules - RuleBuilder
 
-A starter resultBuilder that supports all the flow logic, including for loops.
+A starter resultBuilder that supports all the flow logic, including ForEach.

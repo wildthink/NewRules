@@ -16,13 +16,6 @@ struct Test {
         flag = false
         print(flag, _flag.defaultValue)
     }
-    
-    @Test func testWrapper() throws {
-        let tv = TestView()
-//        print(tv.key, tv.testProp, tv.$testProp.str)
-        tv.testProp = 43
-        print(tv.key, tv.testProp as Any)
-    }
 
     @Test func testDefaultValues() {
         var values = ScopeValues()
@@ -31,37 +24,12 @@ struct Test {
     }
 }
 
-//import SwiftUIs
-
 extension ScopeValues {
     var version: String {
         get { _get(default: "0.0.1") }
         mutating set { _set(newValue) }
     }
 }
-
-//extension ScopeValues {
-//    @Entry
-//    var name: String = "jane"
-//}
-
-
-//extension ScopeValues {
-//    // @Entry
-//    var name: String // = "jane"
-//    {
-//        get {
-//            self[__Key_name.self]
-//        }
-//        set {
-//            self[__Key_name.self] = newValue
-//        }
-//    }
-//    private struct __Key_name: SwiftUICore.ScopeKey {
-//        typealias Value = String
-//        static var defaultValue: Value { "jane" }
-//    }
-//}
  
 extension ScopeValues {
     
@@ -126,62 +94,3 @@ class ScopeValue<T> {
         self.wrappedValue = wrappedValue
     }
 }
-
-// https://swiftbysundell.com/articles/accessing-a-swift-property-wrappers-enclosing-instance/
-//https://forums.swift.org/t/property-wrappers-access-to-both-enclosing-self-and-wrapper-instance/32526
-
-@propertyWrapper
-public final class Wrapper<Value> {
-    
-    public static subscript<EnclosingSelf>(
-        _enclosingInstance observed: EnclosingSelf,
-        wrapped wrappedKeyPath: ReferenceWritableKeyPath<EnclosingSelf, Value?>,
-        storage storageKeyPath: ReferenceWritableKeyPath<EnclosingSelf, Wrapper>
-    ) -> Int? {
-        get {
-            return observed[keyPath: storageKeyPath].stored
-        }
-        set {
-            let oldValue = observed[keyPath: storageKeyPath].stored
-            if newValue != oldValue {
-                // TODO: call wrapper instance with enclosing self
-            }
-            if let tv = observed as? TestView {
-                print(#line, tv.key)
-            }
-            observed[keyPath: storageKeyPath].stored = newValue
-        }
-    }
-    
-    @available(*, unavailable, message: "Proxy should be in a class")
-    public var wrappedValue: Value? {
-        get { fatalError("called wrappedValue getter") }
-        set { fatalError("called wrappedValue setter") }
-    }
-    
-    public init(wrappedValue: Value?, str: String) {
-        self.str = str
-    }
-    
-    public init(str: String) {
-        self.str = str
-    }
-    
-    // MARK: - Private
-    public var projectedValue: Wrapper<Value> {
-        return self
-    }
-    
-    let str: String
-    var stored: Int?
-}
-
-class TestView {
-    @Wrapper(str: "HelloWorld") public var testProp: Int? = 23
-    var key: String = "_key"
-}
-
-/**
- Swift Compiler Error
- Type '_' has no member 'testProp'
- */

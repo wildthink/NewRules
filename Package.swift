@@ -15,21 +15,21 @@ let package = Package(
             name: "NewRules",
             targets: ["NewRules"]),
         .library(
-            name: "Experimental",
-            targets: ["Experimental"]),
+            name: "Examples",
+            targets: ["Examples"]),
     ],
     targets: [
         .target(
             name: "NewRules"),
         .target(
-            name: "Experimental",
+            name: "Examples",
             dependencies: ["NewRules"]
         ),
        .testTarget(
             name: "NewRulesTests",
             dependencies: [
                 "NewRules",
-                "Experimental",
+                "Examples",
             ]
         ),
     ]

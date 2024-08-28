@@ -7,7 +7,13 @@
 import Foundation
 import NewRules
 
-struct TemplateRewrite: Builtin {
+// TODO: Check for pre-existing file
+// Write Modes
+// - force_overwrite
+// - keep_pre_existing
+// - write only if different (avoid re-build)
+
+struct TemplateRewrite: Builtin {    
     var pin: URL
     var pout: URL
     
@@ -17,10 +23,22 @@ struct TemplateRewrite: Builtin {
     }
     
     func run(environment: ScopeValues) throws {
+        let oldExists = FileManager.default.fileExists(atPath: pout.filePath)
+        let mode = environment.template.mode
+        if mode == .keep && oldExists {
+            return
+        }
         let txt = try String(contentsOf: pin)
-        let data = environment.template.rewrite(txt).data(using: .utf8)
+        guard let data = environment.template.rewrite(txt).data(using: .utf8)
+        else { throw NSError() }
+        if oldExists,
+           mode == .if_different,
+           let old = try? String(contentsOf: pout),
+           old == txt {
+            return
+        }
         try pout.deletingLastPathComponent().mkdirs()
-        try data?.write(to: pout)
+        try data.write(to: pout)
     }
 }
 
@@ -50,9 +68,11 @@ public extension String {
 
 // MARK: Template Enviroment Values
 public struct Template: ScopeKey {
+    public enum WriteMode { case keep, overwrite, if_different }
     public static var defaultValue: Self = .init()
     
     public var values: [String: String] = [:]
+    public var mode: WriteMode = .keep
     
     public func rewrite(_ str: String) -> String {
         str

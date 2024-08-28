@@ -19,27 +19,28 @@ struct Rewrite: Rule {
         self.pout = out
     }
     
+    func skip(_ url: URL) -> Bool {
+        url.lastPathComponent == "Build"
+    }
+    
     var body: some Rule {
         
         let pout = template.rewrite(pout)
         
         switch pin.uti {
+            case _ where skip(pin):
+                EmptyRule()
+                
+            case _ where pin.pathExtension == "xcassets":
+                Copy(in: pin, out: pout)
+                
             case .pbxproj:
                 TemplateRewrite(in: pin, out: pout)
 
-            case .folder:
-                folder(in: pin, out: pout)
-
-            case .text:
+            case .text, .propertyList:
                 TemplateRewrite(in: pin, out: pout)
-
-            case .propertyList:
-                TemplateRewrite(in: pin, out: pout)
-
-            case _ where pin.pathExtension == "xcassets":
-                Copy(in: pin, out: pout)
-
-            case .directory, .package:
+                
+            case .folder, .directory, .package:
                 folder(in: pin, out: pout)
 
             default:
@@ -90,48 +91,5 @@ struct Copy: Builtin {
     func run(environment: ScopeValues) throws {
         try pout.deletingLastPathComponent().mkdirs()
         try FileManager.default.copyItem(at: pin, to: pout)
-    }
-}
-
-// MARK: URL Extensions
-import UniformTypeIdentifiers
-
-public extension UTType {
-    static var pbxproj: UTType =
-    UTType(filenameExtension: "pbxproj", conformingTo: .text)!
-}
-
-func ~= (pattern: UTType?, value: UTType?) -> Bool {
-    guard let pattern, let value else { return false }
-    return value.conforms(to: pattern)
-}
-
-extension URL {
-
-    func mkdirs() throws {
-        try FileManager.default.createDirectory(at: self, withIntermediateDirectories: true)
-    }
-    
-    func directoryContents() throws -> [URL] {
-        try FileManager.default
-            .contentsOfDirectory(at: self,
-                includingPropertiesForKeys:[.isDirectoryKey, .isPackageKey,
-                                            .isRegularFileKey, .contentTypeKey],
-                                 options: .skipsHiddenFiles)
-    }
-    
-    var uti: UTType? {
-        let rvs = try? self.resourceValues(forKeys: [.contentTypeKey])
-        return rvs?.contentType
-    }
-    
-    var filePath: String {
-        standardizedFileURL.path
-    }
-}
-
-extension URL: @retroactive ExpressibleByStringLiteral {
-    public init(stringLiteral value: String) {
-        self = URL(fileURLWithPath: value)
     }
 }
