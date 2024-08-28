@@ -1,35 +1,52 @@
 import XCTest
 @testable import NewRules
-@testable import Experimental
+@testable import Examples
+
+extension Rule {
+    func run(environment: ScopeValues) throws {
+        try self.builtin.run(environment: environment)
+    }
+    
+    func run() throws {
+        try self.builtin.run(environment: ScopeValues())
+    }
+}
 
 final class NewRulesTests: XCTestCase {
      
+    func testClone() async throws {
+        let base: URL = "~/dev/constellation/mac"
+        let output: URL = "/tmp/Clone_i"
+        
+        let context: [String: CustomStringConvertible] = [
+            "APP": "Demo",
+            "NOW": someDate,
+            "COPYRIGHT": "See project License",
+        ]
+        
+        @RuleBuilder
+        var script: some Rule {
+//            RuleGroup {
+                Rewrite(in: base/"MacApp", out: output)
+                Rewrite(in: base/"packs/DocAppPack", out: output)
+                    .template(mode: .overwrite)
+//            }
+//            .template(merge: context)
+        }
+        
+        // FOR TEST Purposes ONLY
+        try? FileManager.default.removeItem(at: output)
+        try script.template(merge: context).run()
+    }
+    
+    let someDate = Date(timeIntervalSince1970: 0)
+        .formatted(date: .abbreviated, time: .shortened)
+
     func testExample() throws {
         let rule = TestRule()
         let env = ScopeValues()
         try rule.builtin.run(environment: env)
 
-        print(env)
-    }
-
-    func testRewriter() throws {
-        let fin: URL = "/Users/jason/dev/Constellation/templates/mac/DocumentApp"
-        let output: URL = "/tmp/Demo"
-        
-        // FOR TEST Purposes ONLY
-        try FileManager.default.removeItem(at: output)
-        
-        let rule =
-        DirectoryRewrite(in: fin, out: output)
-            .template(merge: [
-                "APP": "Demo",
-                "NOW": Date().formatted(date: .abbreviated, time: .shortened),
-            ])
-            .template(set: "COPYRIGHT", to: "See project License")
-
-        let env = ScopeValues()
-        try rule.builtin.run(environment: env)
-        
         print(env)
     }
     
@@ -45,6 +62,18 @@ final class NewRulesTests: XCTestCase {
                 print(type(of: s), s)
             }
         }
+    }
+    
+    func testURLAddtions() {
+        let base: URL = "~/dev"
+        print(#line, base)
+        print(#line, base.standardized)
+        print(#line, base.standardizedFileURL)
+
+        print(#line, base.filePath)
+
+        print(#line, base/"//constellation")
+        print(#line, base/"//constellation/mac")
     }
 }
 
@@ -66,6 +95,14 @@ extension Rule {
             $0.values.merge(values, uniquingKeysWith: { $1 })
         }
     }
+    
+    @warn_unqualified_access
+    func template(mode: Template.WriteMode) -> some Rule {
+        modifyEnvironment(keyPath: \.template) {
+            $0.mode = mode
+        }
+    }
+
 }
 
 extension Rule {
