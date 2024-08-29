@@ -8,13 +8,13 @@
 import Foundation
 import NewRules
 
-struct Rewrite: Rule {
+public struct Rewrite: Rule {
     
     @Scope(\.template) var template
     var pin: URL
     var pout: URL
     
-    init(in fin: URL, out: URL) {
+    public init(in fin: URL, out: URL) {
         self.pin = fin
         self.pout = out
     }
@@ -23,7 +23,7 @@ struct Rewrite: Rule {
         url.lastPathComponent == "Build"
     }
     
-    var body: some Rule {
+    public var body: some Rule {
         
         let pout = template.rewrite(pout)
         
@@ -44,7 +44,6 @@ struct Rewrite: Rule {
                 folder(in: pin, out: pout)
 
             default:
-                TraceRule(msg: "Copy \(pin.filePath) to \(pout.filePath)")
                 Copy(in: pin, out: pout)
         }
     }
@@ -90,6 +89,9 @@ struct Copy: Builtin {
     
     func run(environment: ScopeValues) throws {
         try pout.deletingLastPathComponent().mkdirs()
+        if environment.template.mode != .keep {
+            try? FileManager.default.removeItem(at: pout)
+        }
         try FileManager.default.copyItem(at: pin, to: pout)
     }
 }

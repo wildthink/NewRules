@@ -1,4 +1,4 @@
-//
+public //
 //  TemplateRewrite.swift
 //  NewRules
 //
@@ -13,16 +13,16 @@ import NewRules
 // - keep_pre_existing
 // - write only if different (avoid re-build)
 
-struct TemplateRewrite: Builtin {    
+public struct TemplateRewrite: Builtin {
     var pin: URL
     var pout: URL
     
-    init(in pin: URL, out: URL) {
+    public init(in pin: URL, out: URL) {
         self.pin = pin
         self.pout = out
     }
     
-    func run(environment: ScopeValues) throws {
+    public func run(environment: ScopeValues) throws {
         let oldExists = FileManager.default.fileExists(atPath: pout.filePath)
         let mode = environment.template.mode
         if mode == .keep && oldExists {
@@ -88,6 +88,34 @@ public struct Template: ScopeKey {
     }
 }
 
+public extension Rule {
+    
+    @warn_unqualified_access
+    func template<S: CustomStringConvertible>(
+        set key: String, to value: S
+    ) -> some Rule {
+        modifyEnvironment(keyPath: \.template) {
+            $0.values[key] = value.description
+        }
+    }
+    
+    @warn_unqualified_access
+    func template(merge: [String:CustomStringConvertible]) -> some Rule {
+        modifyEnvironment(keyPath: \.template) {
+            let values = merge.map { ($0.key, $0.value.description) }
+            $0.values.merge(values, uniquingKeysWith: { $1 })
+        }
+    }
+    
+    @warn_unqualified_access
+    func template(mode: Template.WriteMode) -> some Rule {
+        modifyEnvironment(keyPath: \.template) {
+            $0.mode = mode
+        }
+    }
+}
+
+// MARK: - ScopeValues template
 extension ScopeValues {
     public var template: Template {
         get { self[Template.self] }

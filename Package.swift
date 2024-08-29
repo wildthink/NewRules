@@ -15,21 +15,32 @@ let package = Package(
             name: "NewRules",
             targets: ["NewRules"]),
         .library(
-            name: "Examples",
-            targets: ["Examples"]),
+            name: "Rewriter",
+            targets: [
+                "Rewriter",
+                "NewRules",
+            ]),
+        .executable(name: "clone", targets: ["Tool"]),
     ],
     targets: [
         .target(
             name: "NewRules"),
         .target(
-            name: "Examples",
+            name: "Rewriter",
             dependencies: ["NewRules"]
+        ),
+        .executableTarget(
+            name: "Tool",
+            dependencies: [
+                "NewRules",
+                "Rewriter",
+            ]
         ),
        .testTarget(
             name: "NewRulesTests",
             dependencies: [
                 "NewRules",
-                "Examples",
+                "Rewriter",
             ]
         ),
     ]

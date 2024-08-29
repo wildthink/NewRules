@@ -1,16 +1,6 @@
 import XCTest
 @testable import NewRules
-@testable import Examples
-
-extension Rule {
-    func run(environment: ScopeValues) throws {
-        try self.builtin.run(environment: environment)
-    }
-    
-    func run() throws {
-        try self.builtin.run(environment: ScopeValues())
-    }
-}
+@testable import Rewriter
 
 final class NewRulesTests: XCTestCase {
      
@@ -75,34 +65,6 @@ final class NewRulesTests: XCTestCase {
         print(#line, base/"//constellation")
         print(#line, base/"//constellation/mac")
     }
-}
-
-extension Rule {
-    
-    @warn_unqualified_access
-    func template<S: CustomStringConvertible>(
-        set key: String, to value: S
-    ) -> some Rule {
-        modifyEnvironment(keyPath: \.template) {
-            $0.values[key] = value.description
-        }
-    }
-
-    @warn_unqualified_access
-    func template(merge: [String:CustomStringConvertible]) -> some Rule {
-        modifyEnvironment(keyPath: \.template) {
-            let values = merge.map { ($0.key, $0.value.description) }
-            $0.values.merge(values, uniquingKeysWith: { $1 })
-        }
-    }
-    
-    @warn_unqualified_access
-    func template(mode: Template.WriteMode) -> some Rule {
-        modifyEnvironment(keyPath: \.template) {
-            $0.mode = mode
-        }
-    }
-
 }
 
 extension Rule {

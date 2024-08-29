@@ -42,6 +42,17 @@ public struct AnyBuiltin: Builtin {
     }
 }
 
+// MARK: - Top (Rule) run() entry point
+public extension Rule {
+    func run(environment: ScopeValues) throws {
+        try self.builtin.run(environment: environment)
+    }
+    
+    func run() throws {
+        try self.builtin.run(environment: ScopeValues())
+    }
+}
+
 public extension BuiltinRule {
     typealias Body = Never
     var body: Never {

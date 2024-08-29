@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 /// This overload of the matching operator for ``UTType`` enables a
 /// a clean ergonmic and safer check using the UTType confomance
 /// hierarchy.
-func ~= (pattern: UTType?, value: UTType?) -> Bool {
+public func ~= (pattern: UTType?, value: UTType?) -> Bool {
     guard let pattern, let value else { return false }
     return value.conforms(to: pattern)
 }
@@ -45,7 +45,6 @@ public extension URL {
                 .standardizedFileURL
         } else {
             lhs.appending(path: rhs)
-                .appending(path: rhs)
                 .standardizedFileURL
         }
     }
