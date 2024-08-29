@@ -7,14 +7,19 @@
 import Foundation
 
 @dynamicMemberLookup
-public class CommandArguments {
+public struct CommandArguments {
     public var exec: String = ""
     public var cmd: String?
     public var argm: [String: [String]] = [:]
     public var rest: [String] = []
     
-    public var flags: Set<String> = .init()
+    public var flags: Set<String>
     public var showHelp: Bool { self.h || self.help }
+    
+    public init(flags: [String] = [], argv: [String] = CommandLine.arguments) {
+        self.flags = Set(flags)
+        self.parse(argv: argv)
+    }
     
     func value<Value>(for key: String) -> [Value] {
         guard let sv = argm[key] ?? argm[key.uppercased()]
@@ -53,8 +58,8 @@ public class CommandArguments {
 public extension CommandArguments {
     /// The expected format of the command line arguments:
     ///  <exec> cmd? (-key=value | -key value)... rest...
-    func parse(argv: [String] = CommandLine.arguments
-    ) -> Self {
+    mutating func parse(argv: [String] = CommandLine.arguments
+    ) {
         var seq = argv.makeIterator()
         exec = seq.next() ?? ""
         if argv.count > 1, !argv[1].hasPrefix("-") {
@@ -74,10 +79,9 @@ public extension CommandArguments {
                 rest.append(arg)
             }
         }
-        return self
     }
     
-    func append(_ key: String, value: (any StringProtocol)?) {
+    mutating func append(_ key: String, value: (any StringProtocol)?) {
         var cur = argm[key] ?? []
         cur.append(String(describing: value ?? ""))
         argm[key] = cur

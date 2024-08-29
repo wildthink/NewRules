@@ -17,12 +17,12 @@ struct Runner {
         #if DEBUG
         let argv = CommandLine.arguments.first!.hasSuffix("Debug/clone")
         ? targs : CommandLine.arguments
-        let args = CommandArguments().parse(argv: argv)
+        let args = CommandArguments(argv: argv)
         #else
         let args = CommandArguments()
         #endif
         
-        guard !args.showHelp,
+        guard !args.showHelp, !args.rest.isEmpty,
               let base:URL = args.base.first,
               let output:URL = args.output.first,
               let app = args.app.first
@@ -61,16 +61,13 @@ struct Runner {
     static func help() {
         print(
         """
-        clone 
-            -base <base>
-            -output <directory>
-            -app <APP>
-            template_names...
+        Useage: clone -base <base> -output <directory> -app <APP> template_names...
         """)
     }
 }
 
 #if DEBUG
+// clone -base ~/dev/constellation/mac -output /tmp/b3 -app Pink MacApp
 let targs = [
     "clone",
     "-base",
