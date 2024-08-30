@@ -20,7 +20,10 @@ public struct Rewrite: Rule {
     }
     
     func skip(_ url: URL) -> Bool {
-        url.lastPathComponent == "Build"
+        if url.lastPathComponent == "Build" { return true }
+        if url.lastPathComponent == "xcuserdata" { return true }
+        if url.lastPathComponent == "project.xcworkspace" { return true }
+        return false
     }
     
     public var body: some Rule {
@@ -37,7 +40,10 @@ public struct Rewrite: Rule {
             case .pbxproj:
                 TemplateRewrite(in: pin, out: pout)
 
-            case .text, .propertyList:
+            case .propertyList:
+                PlistRewrite(in: pin, out: pout)
+
+            case .text:
                 TemplateRewrite(in: pin, out: pout)
                 
             case .folder, .directory, .package:

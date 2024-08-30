@@ -35,6 +35,7 @@ let package = Package(
                 "NewRules",
                 "Rewriter",
             ]
+            ,swiftSettings: swiftSettings
         ),
        .testTarget(
             name: "NewRulesTests",
@@ -45,3 +46,16 @@ let package = Package(
         ),
     ]
 )
+
+let swiftSettings: [SwiftSetting] = [
+    // Enable whole module optimization
+    .unsafeFlags(["-whole-module-optimization"], .when(configuration: .release)),
+    // Optimize for size
+    .unsafeFlags(["-Osize"], .when(configuration: .release)),
+    // Strip all symbols
+    .unsafeFlags(["-Xlinker", "-strip-all"], .when(configuration: .release)),
+    // Enable dead code stripping
+    .unsafeFlags(["-Xlinker", "-dead_strip"], .when(configuration: .release)),
+    // Embed Bitcode (if necessary, optional)
+    //                .unsafeFlags(["-embed-bitcode"], .when(configuration: .release)),
+]
