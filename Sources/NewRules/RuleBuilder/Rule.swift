@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol Rule<Body> {
+public protocol Rule {
     associatedtype Body: Rule
     @RuleBuilder var body: Body { get }
 }
