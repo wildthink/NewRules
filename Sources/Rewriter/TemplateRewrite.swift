@@ -67,9 +67,9 @@ public extension String {
 }
 
 // MARK: Template Enviroment Values
-public struct Template: ScopeKey {
-    public enum WriteMode { case keep, overwrite, if_different }
-    public static var defaultValue: Self = .init()
+public struct Template: ScopeKey, Sendable {
+    public enum WriteMode: Sendable { case keep, overwrite, if_different }
+    public static let defaultValue: Self = .init()
     
     public var values: [String: String] = [:]
     public var mode: WriteMode = .keep

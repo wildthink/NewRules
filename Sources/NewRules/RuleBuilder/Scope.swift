@@ -4,14 +4,23 @@
 //
 //  Created by Jason Jobe on 12/6/22.
 //
+import Foundation
 
 public protocol DynamicValue {
     func update(with: ScopeValues)
 }
+// struct MyShapeStyle: ShapeStyle {
+// func resolve(in environment: EnvironmentValues) -> some ShapeStyle {
 
-public struct ScopeValues {
-    var values: [AnyHashable: Any] = [:]
+public struct ScopeValues: @unchecked Sendable {
+    public typealias Values = [AnyHashable: Any]
+    var values: Values = [:]
     
+    public init() {}
+}
+
+@_spi(InternalScope)
+extension ScopeValues {
     func _get<V>(key: String = #function, default dv: V,
                  _file: String = #fileID, _line: Int = #line
     ) -> V {
@@ -53,7 +62,7 @@ public struct Scope<Value>: SetEnvironment {
 
 extension ScopeValues {
     /// This gives us access to all the defaultValues
-    static let defaultValues = ScopeValues()
+    @TaskLocal static var defaultValues = ScopeValues()
 }
 
 #if UI

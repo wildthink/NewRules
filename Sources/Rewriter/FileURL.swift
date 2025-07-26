@@ -98,6 +98,6 @@ extension URL: @retroactive ExpressibleByStringLiteral {
 // MARK: UTType Extensions
 public extension UTType {
     /// The UTType for Xcode project.pbxproj files
-    static var pbxproj: UTType =
+    static let pbxproj: UTType =
     UTType(filenameExtension: "pbxproj", conformingTo: .text)!
 }

@@ -1,10 +1,10 @@
 public protocol RuleModifier {
     associatedtype Result: Rule
     @RuleBuilder
-    func rules(_ content: Content) -> Result
+    func rules(_ content: AnyRule) -> Result
 }
 
-public struct Content: Builtin {
+public struct AnyRule: Builtin {
     
     private var rule: any Rule
 
@@ -16,7 +16,7 @@ public struct Content: Builtin {
         try rule.builtin.run(environment: environment)
     }
 }
-public typealias AnyRule = Content
+//public typealias AnyRule = Content
 
 public struct ModifiedRule<R: Rule, M: RuleModifier>: Builtin {
     public typealias Content = R
@@ -65,7 +65,7 @@ extension Rule {
 
 public struct EmptyModifier: RuleModifier {
     public init() {}
-    public func rules(_ content: Content) -> some Rule {
+    public func rules(_ content: AnyRule) -> some Rule {
         content
     }
 }

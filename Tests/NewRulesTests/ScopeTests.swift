@@ -6,9 +6,10 @@
 //
 
 import Testing
+@_spi(InternalScope)
 @testable import NewRules
 
-struct Test {
+struct ScopeTests {
 
     @Test func testScope() async throws {
         @ScopeValue var flag: Bool = true
@@ -79,18 +80,49 @@ extension ScopeValues {
     }
 }
 
+@MainActor
 extension ScopeValues {
     @ScopeValue static var count: Int = 0
 }
 
+import Foundation
+
+final class Mutex<T> {
+    private var _value: T
+    private var lock = NSLock()
+    
+    init(_ value: T) {
+        _value = value
+    }
+    
+    /// Runs the provided closure while holding a lock on the value.
+    ///
+    /// - parameter body: A closure that can modify the value.
+    func withLock<U>(_ body: (inout T) throws -> U) rethrows -> U {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body(&_value)
+    }
+}
 
 @propertyWrapper
-class ScopeValue<T> {
+class ScopeValue<T>: @unchecked Sendable {
     var defaultValue: T
-    
+    private var lock = NSLock()
+
     var wrappedValue: T
     init(wrappedValue: T) {
         self.defaultValue = wrappedValue
         self.wrappedValue = wrappedValue
     }
+    
+    /// Runs the provided closure while holding a lock on the value.
+    ///
+    /// - parameter body: A closure that can modify the value.
+    func withLock<U>(_ body: (inout T) throws -> U) rethrows -> U {
+        lock.lock()
+        defer { lock.unlock() }
+        return try body(&wrappedValue)
+    }
+
 }

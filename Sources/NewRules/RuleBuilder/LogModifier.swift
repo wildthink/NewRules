@@ -17,7 +17,7 @@ struct LogModifier: RuleModifier {
     @Scope(\.os_log) var os_log
     var msg: String
     
-    func rules(_ content: Content) -> some Rule {
+    func rules(_ content: AnyRule) -> some Rule {
         os_log.debug("\(msg)")
         return content
     }

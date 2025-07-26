@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.1
 
 import PackageDescription
 
@@ -29,11 +29,16 @@ let package = Package(
             name: "Rewriter",
             dependencies: ["NewRules"]
         ),
+        .target(
+            name: "Tokenizer",
+            dependencies: []
+        ),
         .executableTarget(
             name: "Tool",
             dependencies: [
                 "NewRules",
                 "Rewriter",
+                "Tokenizer",
             ]
             ,swiftSettings: swiftSettings
         ),
@@ -42,6 +47,7 @@ let package = Package(
             dependencies: [
                 "NewRules",
                 "Rewriter",
+                "Tokenizer",
             ]
         ),
     ]

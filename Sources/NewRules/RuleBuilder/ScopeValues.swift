@@ -10,7 +10,7 @@ import OSLog
 
 // MARK: Logger Environment Value
 struct LoggerKey: ScopeKey {
-    static var defaultValue: Logger = Logger(subsystem: "com.wildthink", category: "rules")
+    static let defaultValue: Logger = Logger(subsystem: "com.wildthink", category: "rules")
 }
 
 extension ScopeValues {

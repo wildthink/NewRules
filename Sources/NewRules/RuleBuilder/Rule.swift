@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol Rule {
+public protocol Rule<Body> {
     associatedtype Body: Rule
     @RuleBuilder var body: Body { get }
 }
@@ -10,6 +10,13 @@ public protocol BuiltinRule {
 }
 
 public typealias Builtin = BuiltinRule & Rule
+
+// MARK: - Rule.run() Top Level Entry Point
+public extension Rule {
+    func run(top environment: ScopeValues = .init()) throws {
+        try self.builtin.run(environment: environment)
+    }
+}
 
 public enum RuleError: Error {
     case missing(msg: String, file: String = #file, line: Int = #line)
@@ -39,17 +46,6 @@ public struct AnyBuiltin: Builtin {
 
     public func run(environment: ScopeValues) throws {
         try _run(environment)
-    }
-}
-
-// MARK: - Top (Rule) run() entry point
-public extension Rule {
-    func run(environment: ScopeValues) throws {
-        try self.builtin.run(environment: environment)
-    }
-    
-    func run() throws {
-        try self.builtin.run(environment: ScopeValues())
     }
 }
 
