@@ -19,6 +19,15 @@ extension OptionSet {
     }
 }
 
+extension CaseIterable {
+    init?(index ndx: AllCases.Index) {
+        guard ndx >= Self.allCases.startIndex && ndx < Self.allCases.endIndex else {
+            return nil
+        }
+        self = Self.allCases[ndx]
+    }
+}
+
 // MARK: - OptionSets for Months and Weekdays
 struct MonthOptions: OptionSet, CaseIterable {
     
@@ -39,10 +48,31 @@ struct MonthOptions: OptionSet, CaseIterable {
     static let allCases: [MonthOptions] = [
         .january, .february, .march, .april, .may, .june, .july, .august, .september, .october, .november, .december
     ]
-
+    static var allLocalized: [String] {
+        Calendar.current.monthSymbols
+    }
+    
     static let all: MonthOptions = [
         .january, .february, .march, .april, .may, .june, .july, .august, .september, .october, .november, .december
     ]
+}
+
+extension MonthOptions {
+    init?(_ name: String) {
+        let key = name.lowercased()
+        if let it = Self.allCases
+            .first (where: { String(describing: $0) == key }) {
+            self = it
+        } else {
+            let locals = Self.allLocalized.map(\.localizedLowercase)
+            if let ndx = locals
+                .firstIndex (where: { String(describing: $0) == key }) {
+                self = Self.allCases[ndx]
+            } else {
+                return nil
+            }
+        }
+    }
 }
 
 struct WeekdayOptions: OptionSet, CaseIterable {

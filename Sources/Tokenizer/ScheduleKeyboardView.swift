@@ -15,43 +15,34 @@ struct ScheduleKeyboardView: View {
     private static let digitKeys: [String] = ["1","2","3","4","5","6","7","8","9","0"]
     
     var body: some View {
-        VStack(spacing: 8) {
-            // Mode toggle (reordered)
-            Grid {
-                GridRow {
-                    Button(systemSymbol: "number.square") {
-                        mode = .year }
-                    .foregroundColor(mode == .year ? .blue : .primary)
-
-                    Button(action: { mode = .months }) {
-                        Image(systemName: "calendar.circle")
-                            .foregroundColor(mode == .months ? .blue : .primary)
-                    }
-                    Button(action: { mode = .numbers }) {
-                        Image(systemName: "123.rectangle")
-                            .foregroundColor(mode == .numbers ? .blue : .primary)
-                    }
-                    Button(action: { mode = .weekdays }) {
-                        Image(systemName: "calendar")
-                            .foregroundColor(mode == .weekdays ? .blue : .primary)
-                    }
+        TabView(selection: $mode) {
+            digitPad
+                .tag(Mode.year)
+                .tabItem {
+                    Image(systemName: "number.square")
+                    Text("Year")
                 }
-            }
-            .font(.title2)
-            .padding(.horizontal)
-
-            ZStack {
-                    switch mode {
-                        case .year:
-                            digitPad
-                        case .months:
-                            monthPad
-                        case .numbers:
-                            digitPad
-                        case .weekdays:
-                            weekdayPad
-                    }
-            }
+            
+            monthPad
+                .tag(Mode.months)
+                .tabItem {
+                    Image(systemName: "calendar.circle")
+                    Text("Months")
+                }
+            
+            digitPad
+                .tag(Mode.numbers)
+                .tabItem {
+                    Image(systemName: "123.rectangle")
+                    Text("Day")
+                }
+            
+            weekdayPad
+                .tag(Mode.weekdays)
+                .tabItem {
+                    Image(systemName: "calendar")
+                    Text("Weekdays")
+                }
         }
         .padding(.vertical)
     }
@@ -311,10 +302,9 @@ struct ScheduleKeyboardDemo: View {
                 .font(.headline)
             Text(schedule.toHumanString())
                 .font(.subheadline)
-//                .foregroundColor(.secondary)
                 .padding(.bottom, 8)
             ScheduleKeyboardView(schedule: $schedule)
-                .frame(width: 200, height: 280)
+                .frame(width: 280, height: 280)
         }
     }
 }
