@@ -118,7 +118,7 @@ struct ScheduleParser {
         // WEEKDAY + ORDINAL
         if scanner.scanString("[") != nil {
             let content = scanner.scanUpToString("]") ?? ""
-            scanner.scanString("]")
+            _ = scanner.scanString("]")
             let parts = content.split(separator: ":")
             schedule.weekdays = parseWeekdayPattern(String(parts[0]))
             if parts.count > 1, let ord = Int(parts[1]) {
@@ -296,15 +296,15 @@ private func ordinalWord(_ ord: Int) -> String {
 }
 
 // MARK: Helper functions
-extension Calendar {
-    var shortWeekdaySymbolsLocalized: [String] {
-        self.shortWeekdaySymbols
-    }
-    
-    var shortMonthSymbolsLocalized: [String] {
-        self.shortMonthSymbols
-    }
-}
+//extension Calendar {
+//    var shortWeekdaySymbolsLocalized: [String] {
+//        self.shortWeekdaySymbols
+//    }
+//    
+//    var shortMonthSymbolsLocalized: [String] {
+//        self.shortMonthSymbols
+//    }
+//}
 
 var mondayFirstWeekdays: [String] {
     var days = Calendar.current.shortWeekdaySymbols
@@ -402,7 +402,6 @@ private func monthsToHumanString(_ months: MonthOptions, locale: Locale) -> Stri
 private func daysToHumanString(_ days: DayOfMonth) -> String {
     let selected = days.selectedDays
     if selected.count == 31 { return "every day" }
-    let ordinals = selected.map { ordinalDay($0) }
     let ranges = contiguousRanges(selected)
     let ordRange = ranges.map { range -> String in
         if range.count == 1 {
@@ -416,15 +415,20 @@ private func daysToHumanString(_ days: DayOfMonth) -> String {
 
 private func weekdaysToHumanString(_ weekdays: WeekdayOptions, locale: Locale) -> String {
     if weekdays == .all { return "every day" }
-    let all: [(String, Int)] = [("Sun", 0), ("Mon", 1), ("Tue", 2), ("Wed", 3), ("Thu", 4), ("Fri", 5), ("Sat", 6)]
-    let selected = all.compactMap { weekdays.contains(WeekdayOptions(rawValue: 1 << $0.1)) ? $0.0 : nil }
-    let indices = all.compactMap { weekdays.contains(WeekdayOptions(rawValue: 1 << $0.1)) ? $0.1 : nil }
-    let ranges = contiguousRanges(indices)
+    
+    let calendar = Calendar(identifier: .gregorian)
+    var calendarWithLocale = calendar
+    calendarWithLocale.locale = locale
+    let weekdaySymbols = calendarWithLocale.shortWeekdaySymbols
+    
+    let all = Array(0..<7)
+    let selected = all.filter { weekdays.contains(WeekdayOptions(rawValue: 1 << $0)) }
+    let ranges = contiguousRanges(selected)
     let abbrevs = ranges.map { range -> String in
         if range.count == 1 {
-            return all[range.lowerBound].0
+            return weekdaySymbols[range.lowerBound]
         } else {
-            return "\(all[range.lowerBound].0)-\(all[range.upperBound].0)"
+            return "\(weekdaySymbols[range.lowerBound])-\(weekdaySymbols[range.upperBound])"
         }
     }
     return abbrevs.joined(separator: ",")

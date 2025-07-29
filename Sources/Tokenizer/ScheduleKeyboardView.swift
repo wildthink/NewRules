@@ -1,15 +1,14 @@
 import SwiftUI
 
 struct ScheduleKeyboardView: View {
-    enum Mode { case weekdays, months, numbers, year }
+    enum Mode { case year, months, numbers, weekdays }
     @Binding var schedule: Schedule
-    @Binding var humanReadable: String
-    @State private var mode: Mode = .weekdays
+    @State private var mode: Mode = .year
     @State private var numberInput: String = ""
     @State private var yearInput: String = ""
     @State private var selectedOrdinal: Int? = nil // nil = Every
     
-    let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    let weekdays = Calendar.current.shortWeekdaySymbols
     let months = Calendar.current.shortMonthSymbols
     let days = Array(1...31)
     
@@ -17,163 +16,168 @@ struct ScheduleKeyboardView: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            // Mode toggle
-            HStack {
-                Button(action: { mode = .weekdays }) {
-                    Image(systemName: "calendar")
-                        .foregroundColor(mode == .weekdays ? .blue : .primary)
-                }
-                Spacer()
-                Button(action: { mode = .months }) {
-                    Image(systemName: "calendar.circle")
-                        .foregroundColor(mode == .months ? .blue : .primary)
-                }
-                Spacer()
-                Button(action: { mode = .numbers }) {
-                    Image(systemName: "123.rectangle")
-                        .foregroundColor(mode == .numbers ? .blue : .primary)
-                }
-                Spacer()
-                Button(action: { mode = .year }) {
-                    Image(systemName: "number.square")
-                        .foregroundColor(mode == .year ? .blue : .primary)
+            // Mode toggle (reordered)
+            Grid {
+                GridRow {
+                    Button(systemSymbol: "number.square") {
+                        mode = .year }
+                    .foregroundColor(mode == .year ? .blue : .primary)
+
+                    Button(action: { mode = .months }) {
+                        Image(systemName: "calendar.circle")
+                            .foregroundColor(mode == .months ? .blue : .primary)
+                    }
+                    Button(action: { mode = .numbers }) {
+                        Image(systemName: "123.rectangle")
+                            .foregroundColor(mode == .numbers ? .blue : .primary)
+                    }
+                    Button(action: { mode = .weekdays }) {
+                        Image(systemName: "calendar")
+                            .foregroundColor(mode == .weekdays ? .blue : .primary)
+                    }
                 }
             }
             .font(.title2)
             .padding(.horizontal)
 
-            // Weekday pad with ordinal column
-            if mode == .weekdays {
-                let ordinals: [(String, Int?)] = [
-                    ("1st", 1),
-                    ("2nd", 2),
-                    ("3rd", 3),
-                    ("Last", -1),
-                    ("Every", nil)
-                ]
-                HStack(alignment: .top, spacing: 8) {
-                    VStack(spacing: 8) {
-                        ForEach(ordinals, id: \.1) { label, value in
-                            Button(action: {
-                                selectedOrdinal = value
-                                schedule.ordinal = value
-                                updateHumanReadable()
-                            }) {
-                                Text(label)
-                                    .frame(maxWidth: .infinity, minHeight: 44)
-                                    .background((selectedOrdinal == value || (selectedOrdinal == nil && value == nil)) ? Color.green.opacity(0.3) : Color.green.opacity(0.12))
-                                    .foregroundColor(.primary)
-                                    .cornerRadius(6)
-                            }
-                        }
+            ZStack {
+                    switch mode {
+                        case .year:
+                            digitPad
+                        case .months:
+                            monthPad
+                        case .numbers:
+                            digitPad
+                        case .weekdays:
+                            weekdayPad
                     }
-                    .frame(maxWidth: .infinity)
-                    VStack(spacing: 8) {
-                        ForEach(0..<5) { row in
-                            HStack(spacing: 8) {
-                                ForEach(0..<2) { col in
-                                    let idx = row * 2 + col
-                                    if row == 4 && col == 1 {
-                                        // Bottom trailing spot: cancel key
-                                        Button(action: {
-                                            schedule.weekdays = []
-                                            selectedOrdinal = nil
-                                            schedule.ordinal = nil
-                                            updateHumanReadable()
-                                        }) {
-                                            Image(systemName: "xmark.circle")
-                                                .frame(maxWidth: .infinity, minHeight: 44)
-                                                .background(Color.red.opacity(0.12))
-                                                .foregroundColor(.red)
-                                                .cornerRadius(8)
-                                        }
-                                    } else if idx < weekdays.count {
-                                        let day = weekdays[idx]
-                                        Button(action: {
-                                            let opt = WeekdayOptions(rawValue: 1 << idx)
-                                            if schedule.weekdays.contains(opt) {
-                                                schedule.weekdays.remove(opt)
-                                            } else {
-                                                schedule.weekdays.insert(opt)
-                                            }
-                                            updateHumanReadable()
-                                        }) {
-                                            Text(day)
-                                                .frame(maxWidth: .infinity, minHeight: 44)
-                                                .background(schedule.weekdays.contains(WeekdayOptions(rawValue: 1 << idx)) ? Color.blue : Color.gray.opacity(0.2))
-                                                .foregroundColor(.primary)
-                                                .cornerRadius(8)
-                                        }
-                                    } else {
-                                        Spacer().frame(maxWidth: .infinity, minHeight: 44)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .frame(maxWidth: .infinity)
-            } else {
-                // Keypad grid (3x5) for other modes
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                    ForEach(Array(keysForMode().enumerated()), id: \.offset) { idx, key in
-                        if key == "delete.left" {
-                            Button(action: { handleKeyTap(key) }) {
-                                Image(systemName: key)
-                                    .frame(maxWidth: .infinity, minHeight: 44)
-                                    .background(Color.gray.opacity(0.2))
-                                    .foregroundColor(.red)
-                                    .cornerRadius(8)
-                            }
-                        } else {
-                            Button(action: { handleKeyTap(key) }) {
-                                Text(key)
-                                    .frame(maxWidth: .infinity, minHeight: 44)
-                                    .background(keyBackgroundColor(key))
-                                    .foregroundColor(keyForegroundColor(key))
-                                    .cornerRadius(8)
-                            }
-                        }
-                    }
-                }
             }
-            
-            // Input display
-            if mode == .numbers {
-                Text(numberInput.isEmpty ? "Enter day of month" : numberInput)
-                    .font(.title2)
-                    .padding(.vertical, 4)
-            } else if mode == .year {
-                Text(yearInput.isEmpty ? "Enter year" : yearInput)
-                    .font(.title2)
-                    .padding(.vertical, 4)
-            }
-
-            // Remove old control row with Clear button
         }
         .padding(.vertical)
     }
-    
-    private func keysForMode() -> [String] {
-        let clearSymbol = "delete.left"
-        switch mode {
-        case .weekdays:
-            var keys = weekdays
-            while keys.count < 14 { keys.append("") }
-            keys.append(clearSymbol)
-            return keys
-        case .months:
-            var keys = months
-            while keys.count < 14 { keys.append("") }
-            keys.append(clearSymbol)
-            return keys
-        case .numbers, .year:
-            var keys = Self.digitKeys
-            while keys.count < 14 { keys.append("") }
-            keys.append(clearSymbol)
-            return keys
+
+    // MARK: - Pads
+    private var digitPad: some View {
+
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
+            ForEach(ScheduleKeyboardView.digitKeys, id: \.self) { mon in
+                KeypadButton(text: mon) {
+                    handleKeyTap(mon)
+                }
+                .background(keyBackgroundColor(mon))
+                .foregroundColor(keyForegroundColor(mon))
+            }
+            ForEach([0, 1, 2, 3], id: \.self) { _ in
+                Color.clear
+            }
+            let key = "delete.left"
+            KeypadButton(systemSymbol: key) {
+                handleKeyTap(key)
+            }
         }
+    }
+
+    private var monthPad: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
+            ForEach(months, id: \.self) { mon in
+                KeypadButton(text: mon) {
+                    handleKeyTap(mon)
+                }
+                .background(keyBackgroundColor(mon))
+                .foregroundColor(keyForegroundColor(mon))
+            }
+            ForEach([0, 1], id: \.self) { _ in
+                Color.clear
+            }
+            let key = "delete.left"
+            KeypadButton(systemSymbol: key) {
+                handleKeyTap(key)
+            }
+            .background(keyBackgroundColor(key))
+            .foregroundColor(keyForegroundColor(key))
+        }
+    }
+
+    private var weekdayPad: some View {
+        // 5x3 grid: col 1 = ordinals,
+        // col 2 = [Mon, Tue, Wed, Thu, Fri],
+        // col 3 = [Sat, Sun, _, _, Cancel]
+        let ordinals: [(String, Int?)] = [
+            ("1st", 1),
+            ("2nd", 2),
+            ("3rd", 3),
+            ("Last", -1),
+            ("Every", nil)
+        ]
+        let weekdays = Calendar.current.shortWeekdaySymbols
+        let col2 = weekdays[1...5].map(\.description)
+        let col3 = [
+            weekdays[6].description,
+            weekdays[0].description,
+            "", "", "cancel"]
+        return LazyVGrid(columns: [
+            GridItem(.flexible()),
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ], spacing: 8) {
+            ForEach(0..<5) { row in
+                // Ordinal column
+                let (label, value) = ordinals[row]
+                KeypadButton(text: label) {
+                    selectedOrdinal = value
+                    schedule.ordinal = value
+                }
+                .background((selectedOrdinal == value || (selectedOrdinal == nil && value == nil)) ? Color.green.opacity(0.3) : Color.green.opacity(0.12))
+                .foregroundColor(.primary)
+                // Weekday column
+                let day = col2[row]
+                if !day.isEmpty {
+                    let isSelected = day.isEmpty ? false : (weekdays.firstIndex(of: day).map { schedule.weekdays.contains(WeekdayOptions(rawValue: 1 << $0)) } ?? false)
+                    KeypadButton(text: day) {
+                        if let dayIdx = weekdays.firstIndex(of: day) {
+                            let opt = WeekdayOptions(rawValue: 1 << dayIdx)
+                            if schedule.weekdays.contains(opt) {
+                                schedule.weekdays.remove(opt)
+                            } else {
+                                schedule.weekdays.insert(opt)
+                            }
+                        }
+                    }
+                    .background(isSelected ? Color.blue : Color.gray.opacity(0.2))
+                    .foregroundColor(.primary)
+                } else {
+                    Spacer().frame(maxWidth: .infinity, minHeight: 44)
+                }
+                // Sat/Sun/Cancel column
+                let col3Label = col3[row]
+                if col3Label == "cancel" {
+                    KeypadButton(systemSymbol: "xmark.circle") {
+                        schedule.weekdays = []
+                        selectedOrdinal = nil
+                        schedule.ordinal = nil
+                    }
+                    .background(Color.red.opacity(0.12))
+                    .foregroundColor(.red)
+                } else if !col3Label.isEmpty {
+                    let isSelected = weekdays.firstIndex(of: col3Label).map { schedule.weekdays.contains(WeekdayOptions(rawValue: 1 << $0)) } ?? false
+                    KeypadButton(text: col3Label) {
+                        if let dayIdx = weekdays.firstIndex(of: col3Label) {
+                            let opt = WeekdayOptions(rawValue: 1 << dayIdx)
+                            if schedule.weekdays.contains(opt) {
+                                schedule.weekdays.remove(opt)
+                            } else {
+                                schedule.weekdays.insert(opt)
+                            }
+                        }
+                    }
+                    .background(isSelected ? Color.blue : Color.gray.opacity(0.2))
+                    .foregroundColor(.primary)
+                } else {
+                    Spacer().frame(maxWidth: .infinity, minHeight: 44)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func handleKeyTap(_ key: String) {
@@ -221,7 +225,6 @@ struct ScheduleKeyboardView: View {
                 }
             }
         }
-        updateHumanReadable()
     }
 
     private func keyBackgroundColor(_ key: String) -> Color {
@@ -270,30 +273,66 @@ struct ScheduleKeyboardView: View {
             schedule.year = nil
             yearInput = ""
         }
-        updateHumanReadable()
+    }
+}
+
+extension Button {
+    init(systemSymbol: String, action: @escaping () -> Void) where Label == Image {
+        self = Button(action: action) {
+            Image(systemName: systemSymbol)
+        }
+    }
+}
+
+struct KeypadButton<Label: View>: View {
+    let action: () -> Void
+    let label: Label
+    init(background: Color = Color.gray.opacity(0.2), foreground: Color = .primary, @ViewBuilder label: () -> Label, action: @escaping () -> Void) {
+        self.label = label()
+        self.action = action
+    }
+    var body: some View {
+        Button(action: action) {
+            label
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .cornerRadius(8)
+        }
+    }
+}
+
+extension KeypadButton {
+    
+    init(text: String, action: @escaping () -> Void) where Label == Text {
+        self.action = action
+        self.label = Text(text)
+    }
+    
+    init(systemSymbol: String, action: @escaping () -> Void) where Label == AnyView {
+        self.action = action
+
+        self.label = AnyView(
+            Image(systemName: systemSymbol)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .cornerRadius(8))
     }
 
-    private func updateHumanReadable() {
-        humanReadable = schedule.toHumanString()
-    }
 }
 
 struct ScheduleKeyboardDemo: View {
     @State private var schedule = Schedule()
-    @State private var humanReadable: String = "every day"
     
     var body: some View {
         VStack(spacing: 12) {
             Text("DSL: \(schedule.toDSL())")
                 .font(.headline)
-            Text(humanReadable)
+            Text(schedule.toHumanString())
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .padding(.bottom, 8)
-            ScheduleKeyboardView(schedule: $schedule, humanReadable: $humanReadable)
+            ScheduleKeyboardView(schedule: $schedule)
+                .frame(width: 300, height: 400)
         }
         .padding()
-        .frame(width: 300, height: 500)
     }
 }
 
