@@ -186,18 +186,32 @@ extension Schedule {
     }
     func toHumanString(locale: Locale = .current) -> String {
         var parts: [String] = []
-        if let y = year { parts.append("in \(y)") }
-        if !months.isEmpty { parts.append("months " + monthsToPattern(months)) }
-        if !days.selectedDays.isEmpty { parts.append("days " + daysToPattern(days)) }
-        if !weekdays.isEmpty {
-            let wdText = weekdaysToPattern(weekdays)
-            if let ord = ordinal {
-                parts.append("\(ordinalWord(ord)) \(wdText)")
+        let monthsString = monthsToHumanString(months, locale: locale)
+        let daysString = daysToHumanString(days)
+        let weekdaysString = weekdaysToHumanString(weekdays, locale: locale)
+
+        if let y = year {
+            parts.append("in \(y)")
+        }
+        if !days.selectedDays.isEmpty {
+            if !months.isEmpty {
+                parts.append("\(daysString) of \(monthsString)")
             } else {
-                parts.append("every \(wdText)")
+                parts.append(daysString)
+            }
+        } else if !months.isEmpty {
+            parts.append(monthsString)
+        }
+        if !weekdays.isEmpty {
+            if let ord = ordinal {
+                parts.append("\(ordinalWord(ord)) \(weekdaysString)")
+            } else {
+                parts.append("every \(weekdaysString)")
             }
         }
-        if let t = time { parts.append("at \(t)") }
+        if let t = time {
+            parts.append("at \(t)")
+        }
         return parts.isEmpty ? "every day" : parts.joined(separator: ", ")
     }
 }
@@ -365,3 +379,89 @@ func testSchedules() {
         }
     }
 }
+
+private func monthsToHumanString(_ months: MonthOptions, locale: Locale) -> String {
+    if months == .all { return "every month" }
+    let calendar = Calendar(identifier: .gregorian)
+    var calendarWithLocale = calendar
+    calendarWithLocale.locale = locale
+    let monthSymbols = calendarWithLocale.shortMonthSymbols
+    let all = Array(1...12)
+    let selected = all.filter { months.contains(MonthOptions(rawValue: 1 << ($0 - 1))) }
+    let ranges = contiguousRanges(selected)
+    let abbrevs = ranges.map { range -> String in
+        if range.count == 1 {
+            return monthSymbols[range.lowerBound - 1]
+        } else {
+            return "\(monthSymbols[range.lowerBound - 1])-\(monthSymbols[range.upperBound - 1])"
+        }
+    }
+    return abbrevs.joined(separator: ",")
+}
+
+private func daysToHumanString(_ days: DayOfMonth) -> String {
+    let selected = days.selectedDays
+    if selected.count == 31 { return "every day" }
+    let ordinals = selected.map { ordinalDay($0) }
+    let ranges = contiguousRanges(selected)
+    let ordRange = ranges.map { range -> String in
+        if range.count == 1 {
+            return ordinalDay(range.lowerBound)
+        } else {
+            return "\(ordinalDay(range.lowerBound))-\(ordinalDay(range.upperBound))"
+        }
+    }
+    return ordRange.joined(separator: ",")
+}
+
+private func weekdaysToHumanString(_ weekdays: WeekdayOptions, locale: Locale) -> String {
+    if weekdays == .all { return "every day" }
+    let all: [(String, Int)] = [("Sun", 0), ("Mon", 1), ("Tue", 2), ("Wed", 3), ("Thu", 4), ("Fri", 5), ("Sat", 6)]
+    let selected = all.compactMap { weekdays.contains(WeekdayOptions(rawValue: 1 << $0.1)) ? $0.0 : nil }
+    let indices = all.compactMap { weekdays.contains(WeekdayOptions(rawValue: 1 << $0.1)) ? $0.1 : nil }
+    let ranges = contiguousRanges(indices)
+    let abbrevs = ranges.map { range -> String in
+        if range.count == 1 {
+            return all[range.lowerBound].0
+        } else {
+            return "\(all[range.lowerBound].0)-\(all[range.upperBound].0)"
+        }
+    }
+    return abbrevs.joined(separator: ",")
+}
+
+private func ordinalDay(_ n: Int) -> String {
+    let suffix: String
+    let ones = n % 10
+    let tens = (n / 10) % 10
+    if tens == 1 {
+        suffix = "th"
+    } else {
+        switch ones {
+        case 1: suffix = "st"
+        case 2: suffix = "nd"
+        case 3: suffix = "rd"
+        default: suffix = "th"
+        }
+    }
+    return "\(n)\(suffix)"
+}
+
+private func contiguousRanges(_ values: [Int]) -> [ClosedRange<Int>] {
+    guard !values.isEmpty else { return [] }
+    var result: [ClosedRange<Int>] = []
+    var start = values[0]
+    var prev = values[0]
+    for val in values.dropFirst() {
+        if val == prev + 1 {
+            prev = val
+        } else {
+            result.append(start...prev)
+            start = val
+            prev = val
+        }
+    }
+    result.append(start...prev)
+    return result
+}
+
