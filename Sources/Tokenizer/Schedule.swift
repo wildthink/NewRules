@@ -8,6 +8,17 @@
 
 import Foundation
 
+// MARK: - OptionSet Extensions
+extension OptionSet {
+    mutating func toggle(_ options: Self.Element) {
+        if self.contains(options) {
+            self.remove(options)
+        } else {
+            self.insert(options)
+        }
+    }
+}
+
 // MARK: - OptionSets for Months and Weekdays
 struct MonthOptions: OptionSet, CaseIterable {
     

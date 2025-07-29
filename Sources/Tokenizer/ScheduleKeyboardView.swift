@@ -136,11 +136,7 @@ struct ScheduleKeyboardView: View {
                     KeypadButton(text: day) {
                         if let dayIdx = weekdays.firstIndex(of: day) {
                             let opt = WeekdayOptions(rawValue: 1 << dayIdx)
-                            if schedule.weekdays.contains(opt) {
-                                schedule.weekdays.remove(opt)
-                            } else {
-                                schedule.weekdays.insert(opt)
-                            }
+                            schedule.weekdays.toggle(opt)
                         }
                     }
                     .background(isSelected ? Color.blue : Color.gray.opacity(0.2))
@@ -163,11 +159,7 @@ struct ScheduleKeyboardView: View {
                     KeypadButton(text: col3Label) {
                         if let dayIdx = weekdays.firstIndex(of: col3Label) {
                             let opt = WeekdayOptions(rawValue: 1 << dayIdx)
-                            if schedule.weekdays.contains(opt) {
-                                schedule.weekdays.remove(opt)
-                            } else {
-                                schedule.weekdays.insert(opt)
-                            }
+                            schedule.weekdays.toggle(opt)
                         }
                     }
                     .background(isSelected ? Color.blue : Color.gray.opacity(0.2))
@@ -190,20 +182,12 @@ struct ScheduleKeyboardView: View {
         case .weekdays:
             if let idx = weekdays.firstIndex(of: key) {
                 let opt = WeekdayOptions(rawValue: 1 << idx)
-                if schedule.weekdays.contains(opt) {
-                    schedule.weekdays.remove(opt)
-                } else {
-                    schedule.weekdays.insert(opt)
-                }
+                schedule.weekdays.toggle(opt)
             }
         case .months:
             if let idx = months.firstIndex(of: key) {
                 let opt = MonthOptions(rawValue: 1 << idx)
-                if schedule.months.contains(opt) {
-                    schedule.months.remove(opt)
-                } else {
-                    schedule.months.insert(opt)
-                }
+                schedule.months.toggle(opt)
             }
         case .numbers:
             if key.allSatisfy({ $0.isNumber }) {
@@ -322,20 +306,20 @@ struct ScheduleKeyboardDemo: View {
     @State private var schedule = Schedule()
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack {
             Text("DSL: \(schedule.toDSL())")
                 .font(.headline)
             Text(schedule.toHumanString())
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+//                .foregroundColor(.secondary)
                 .padding(.bottom, 8)
             ScheduleKeyboardView(schedule: $schedule)
-                .frame(width: 300, height: 400)
+                .frame(width: 200, height: 280)
         }
-        .padding()
     }
 }
 
 #Preview {
     ScheduleKeyboardDemo()
+        .padding()
 }
