@@ -9,7 +9,8 @@
 import Foundation
 
 // MARK: - OptionSets for Months and Weekdays
-struct MonthOptions: OptionSet {
+struct MonthOptions: OptionSet, CaseIterable {
+    
     let rawValue: UInt16
     static let january   = MonthOptions(rawValue: 1 << 0)
     static let february  = MonthOptions(rawValue: 1 << 1)
@@ -23,12 +24,17 @@ struct MonthOptions: OptionSet {
     static let october   = MonthOptions(rawValue: 1 << 9)
     static let november  = MonthOptions(rawValue: 1 << 10)
     static let december  = MonthOptions(rawValue: 1 << 11)
+    
+    static let allCases: [MonthOptions] = [
+        .january, .february, .march, .april, .may, .june, .july, .august, .september, .october, .november, .december
+    ]
+
     static let all: MonthOptions = [
         .january, .february, .march, .april, .may, .june, .july, .august, .september, .october, .november, .december
     ]
 }
 
-struct WeekdayOptions: OptionSet {
+struct WeekdayOptions: OptionSet, CaseIterable {
     let rawValue: UInt8
     static let sunday    = WeekdayOptions(rawValue: 1 << 0)
     static let monday    = WeekdayOptions(rawValue: 1 << 1)
@@ -37,6 +43,11 @@ struct WeekdayOptions: OptionSet {
     static let thursday  = WeekdayOptions(rawValue: 1 << 4)
     static let friday    = WeekdayOptions(rawValue: 1 << 5)
     static let saturday  = WeekdayOptions(rawValue: 1 << 6)
+    
+    static let allCases: [WeekdayOptions] = [
+        .sunday, .monday, .tuesday, .wednesday, .thursday, .friday, .saturday
+    ]
+
     static let all: WeekdayOptions = [
         .sunday, .monday, .tuesday, .wednesday, .thursday, .friday, .saturday
     ]
@@ -204,7 +215,7 @@ extension Schedule {
         }
         if !weekdays.isEmpty {
             if let ord = ordinal {
-                parts.append("\(ordinalWord(ord)) \(weekdaysString)")
+                parts.append("\(ord.ordinalWord) \(weekdaysString)")
             } else {
                 parts.append("every \(weekdaysString)")
             }
@@ -284,15 +295,6 @@ private func rangePattern(from values: [Int]) -> String {
         result.append("\(start)")
     }
     return result.joined(separator: ",")
-}
-private func ordinalWord(_ ord: Int) -> String {
-    switch ord {
-    case 1: return "first"
-    case 2: return "second"
-    case 3: return "third"
-    case -1: return "last"
-    default: return "#\(ord)"
-    }
 }
 
 // MARK: Helper functions
@@ -405,9 +407,9 @@ private func daysToHumanString(_ days: DayOfMonth) -> String {
     let ranges = contiguousRanges(selected)
     let ordRange = ranges.map { range -> String in
         if range.count == 1 {
-            return ordinalDay(range.lowerBound)
+            return range.lowerBound.ordinalFormat
         } else {
-            return "\(ordinalDay(range.lowerBound))-\(ordinalDay(range.upperBound))"
+            return "\(range.lowerBound.ordinalFormat)-\(range.upperBound.ordinalFormat)"
         }
     }
     return ordRange.joined(separator: ",")
@@ -434,7 +436,27 @@ private func weekdaysToHumanString(_ weekdays: WeekdayOptions, locale: Locale) -
     return abbrevs.joined(separator: ",")
 }
 
-private func ordinalDay(_ n: Int) -> String {
+extension Int {
+    var ordinalFormat: String {
+        return _ordinalDay(self)
+    }
+    
+    var ordinalWord: String {
+        return _ordinalWord(self)
+    }
+}
+
+private func _ordinalWord(_ ord: Int) -> String {
+    switch ord {
+        case 1: return "first"
+        case 2: return "second"
+        case 3: return "third"
+        case -1: return "last"
+        default: return "#\(ord)"
+    }
+}
+
+private func _ordinalDay(_ n: Int) -> String {
     let suffix: String
     let ones = n % 10
     let tens = (n / 10) % 10
