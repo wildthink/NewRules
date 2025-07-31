@@ -94,8 +94,6 @@ public extension AnyTypedNode {
                 }
             case let leaf as ATNode<Any>:
                 result += "\(colors.green)ATNode(value: \(leaf.value))\(colors.reset)\n"
-            case is MyNode:
-                result += "\(colors.magenta)MyNode\(colors.reset)\n"
             default:
                 // Handle generic ATNode without knowing type
                 if let mirrorValue = Mirror(reflecting: node).children.first?.value {

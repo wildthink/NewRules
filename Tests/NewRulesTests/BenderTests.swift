@@ -8,6 +8,14 @@
 import Testing
 import Benders
 
+/**
+ Experiment with
+ ```
+ struct Bender<Tag> {
+ func callAsFunction() -> OpenKeypath
+ }
+ 
+ */
 struct TestBenders {
 
     @Test func bender() async throws {
