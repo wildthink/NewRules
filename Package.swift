@@ -33,6 +33,10 @@ let package = Package(
             name: "Tokenizer",
             dependencies: []
         ),
+        .target(
+            name: "Benders",
+            dependencies: []
+        ),
         .executableTarget(
             name: "Tool",
             dependencies: [
@@ -48,6 +52,7 @@ let package = Package(
                 "NewRules",
                 "Rewriter",
                 "Tokenizer",
+                "Benders",
             ]
         ),
     ]
