@@ -15,6 +15,9 @@ let package = Package(
             name: "NewRules",
             targets: ["NewRules"]),
         .library(
+            name: "Tokenizer",
+            targets: ["Tokenizer"]),
+        .library(
             name: "Rewriter",
             targets: [
                 "Rewriter",
@@ -49,7 +52,7 @@ let package = Package(
        .testTarget(
             name: "NewRulesTests",
             dependencies: [
-                "NewRules",
+//                "NewRules",
                 "Rewriter",
                 "Tokenizer",
                 "Benders",
