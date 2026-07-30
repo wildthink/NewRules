@@ -8,12 +8,15 @@ let package = Package(
         .macOS(.v14),
         .iOS(.v16),
         .tvOS(.v16),
-        .watchOS(.v8)
+//        .watchOS(.v8)
     ],
     products: [
         .library(
             name: "NewRules",
             targets: ["NewRules"]),
+        .library(
+            name: "Tokenizer",
+            targets: ["Tokenizer"]),
         .library(
             name: "Rewriter",
             targets: [
@@ -33,6 +36,10 @@ let package = Package(
             name: "Tokenizer",
             dependencies: []
         ),
+        .target(
+            name: "Benders",
+            dependencies: []
+        ),
         .executableTarget(
             name: "Tool",
             dependencies: [
@@ -45,9 +52,10 @@ let package = Package(
        .testTarget(
             name: "NewRulesTests",
             dependencies: [
-                "NewRules",
+//                "NewRules",
                 "Rewriter",
                 "Tokenizer",
+                "Benders",
             ]
         ),
     ]

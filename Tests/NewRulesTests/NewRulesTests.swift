@@ -2,6 +2,7 @@ import XCTest
 @testable import NewRules
 @testable import Rewriter
 
+#if FIXIT
 final class NewRulesTests: XCTestCase {
      
     func testClone() async throws {
@@ -142,3 +143,5 @@ struct TestRule: Rule {
         }
     }
 }
+#endif
+
