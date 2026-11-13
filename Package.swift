@@ -1,4 +1,4 @@
-// swift-tools-version: 6.1
+// swift-tools-version: 6.3
 
 import PackageDescription
 
@@ -23,13 +23,31 @@ let package = Package(
                 "Rewriter",
                 "NewRules",
             ]),
+        .library(
+            name: "XMLBuilder",
+            targets: [
+                "XMLBuilder",
+                "NewRules",
+            ]),
         .executable(name: "clone", targets: ["Tool"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/davdroman/swift-builders.git", from: "0.11.0"),
     ],
     targets: [
         .target(
-            name: "NewRules"),
+            name: "NewRules",
+        dependencies: [
+            .product(name: "Builders", package: "swift-builders"),
+        ]),
         .target(
             name: "Rewriter",
+            dependencies: [
+                "NewRules"
+            ]
+        ),
+        .target(
+            name: "XMLBuilder",
             dependencies: ["NewRules"]
         ),
         .target(

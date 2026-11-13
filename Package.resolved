@@ -1,0 +1,15 @@
+{
+  "originHash" : "798a100a02d67400c2e0668d4bf5323b6709ab48880d52ea5f086d3ca0c8b92e",
+  "pins" : [
+    {
+      "identity" : "swift-builders",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/davdroman/swift-builders.git",
+      "state" : {
+        "revision" : "a9954e796bcc5e03b1f1c43910dd7642dfc981fc",
+        "version" : "0.11.0"
+      }
+    }
+  ],
+  "version" : 3
+}
